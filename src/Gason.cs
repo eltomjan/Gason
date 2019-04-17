@@ -397,7 +397,7 @@ namespace Gason
                         if (pos-- == 0)
                         {
                             while ((strPos < len) && s[strPos++] != ',') ; // find array separator
-                            while ((strPos < len) && ((JsonValue.specialTypes[s[strPos]] & 3) != 0)) strPos++; // skip delims
+                            while ((strPos < len) && ((SearchTables.specialTypes[s[strPos]] & 3) != 0)) strPos++; // skip delims
                             while ((strPos < len) && (s[strPos] != '{')) strPos++; // array start
                             if (strPos < len) strPos++;
                             endPos = strPos;

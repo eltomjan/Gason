@@ -26,6 +26,6 @@ public class Benchmark
             );
         }
         sw.Stop();
-        Console.WriteLine($"Parse 10x ={sw.Elapsed}");
+        Console.WriteLine($"Parse 10x = {sw.Elapsed}");
     }
 }
