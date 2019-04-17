@@ -1,192 +1,221 @@
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
-#if !defined(_WIN32) && !defined(NDEBUG)
-#include <execinfo.h>
-#include <signal.h>
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.RegularExpressions;
+
+namespace Gason
+{
+    class ValueWriter
+    {
+        int SHIFT_WIDTH;
+#if DEBUGGING
+        Stack<VisualNode3> levelStack;
+#else
+        Stack<JsonNode> levelStack;
 #endif
-#include "gason.h"
-
-const int SHIFT_WIDTH = 4;
-
-void dumpString(const char *s) {
-    fputc('"', stdout);
-    while (*s) {
-        int c = *s++;
-        switch (c) {
-        case '\b':
-            fprintf(stdout, "\\b");
-            break;
-        case '\f':
-            fprintf(stdout, "\\f");
-            break;
-        case '\n':
-            fprintf(stdout, "\\n");
-            break;
-        case '\r':
-            fprintf(stdout, "\\r");
-            break;
-        case '\t':
-            fprintf(stdout, "\\t");
-            break;
-        case '\\':
-            fprintf(stdout, "\\\\");
-            break;
-        case '"':
-            fprintf(stdout, "\\\"");
-            break;
-        default:
-            fputc(c, stdout);
-        }
-    }
-    fprintf(stdout, "%s\"", s);
-}
-
-void dumpValue(JsonValue o, int indent = 0) {
-    switch (o.getTag()) {
-    case JSON_NUMBER:
-        fprintf(stdout, "%f", o.toNumber());
-        break;
-    case JSON_STRING:
-        dumpString(o.toString());
-        break;
-    case JSON_ARRAY:
-        // It is not necessary to use o.toNode() to check if an array or object
-        // is empty before iterating over its members, we do it here to allow
-        // nicer pretty printing.
-        if (!o.toNode()) {
-            fprintf(stdout, "[]");
-            break;
-        }
-        fprintf(stdout, "[\n");
-        for (auto i : o) {
-            fprintf(stdout, "%*s", indent + SHIFT_WIDTH, "");
-            dumpValue(i->value, indent + SHIFT_WIDTH);
-            fprintf(stdout, i->next ? ",\n" : "\n");
-        }
-        fprintf(stdout, "%*s]", indent, "");
-        break;
-    case JSON_OBJECT:
-        if (!o.toNode()) {
-            fprintf(stdout, "{}");
-            break;
-        }
-        fprintf(stdout, "{\n");
-        for (auto i : o) {
-            fprintf(stdout, "%*s", indent + SHIFT_WIDTH, "");
-            dumpString(i->key);
-            fprintf(stdout, ": ");
-            dumpValue(i->value, indent + SHIFT_WIDTH);
-            fprintf(stdout, i->next ? ",\n" : "\n");
-        }
-        fprintf(stdout, "%*s}", indent, "");
-        break;
-    case JSON_TRUE:
-        fprintf(stdout, "true");
-        break;
-    case JSON_FALSE:
-        fprintf(stdout, "false");
-        break;
-    case JSON_NULL:
-        fprintf(stdout, "null");
-        break;
-    }
-}
-
-void printError(const char *filename, int status, char *endptr, char *source, size_t size) {
-    char *s = endptr;
-    while (s != source && *s != '\n')
-        --s;
-    if (s != endptr && s != source)
-        ++s;
-
-    int lineno = 0;
-    for (char *it = s; it != source; --it) {
-        if (*it == '\n') {
-            ++lineno;
-        }
-    }
-
-    int column = (int)(endptr - s);
-
-    fprintf(stderr, "%s:%d:%d: %s\n", filename, lineno + 1, column + 1, jsonStrError(status));
-
-    while (s != source + size && *s != '\n') {
-        int c = *s++;
-        switch (c) {
-        case '\b':
-            fprintf(stderr, "\\b");
-            column += 1;
-            break;
-        case '\f':
-            fprintf(stderr, "\\f");
-            column += 1;
-            break;
-        case '\n':
-            fprintf(stderr, "\\n");
-            column += 1;
-            break;
-        case '\r':
-            fprintf(stderr, "\\r");
-            column += 1;
-            break;
-        case '\t':
-            fprintf(stderr, "%*s", SHIFT_WIDTH, "");
-            column += SHIFT_WIDTH - 1;
-            break;
-        case '\0':
-            fprintf(stderr, "\"");
-            break;
-        default:
-            fputc(c, stderr);
-        }
-    }
-
-    fprintf(stderr, "\n%*s\n", column + 1, "^");
-}
-
-int main(int argc, char **argv) {
-#if !defined(_WIN32) && !defined(NDEBUG)
-    signal(SIGABRT, [](int) {
-		void *callstack[64];
-		int size = backtrace(callstack, sizeof(callstack)/sizeof(callstack[0]));
-		char **strings = backtrace_symbols(callstack, size);
-		for (int i = 0; i < size; ++i)
-			fprintf(stderr, "%s\n", strings[i]);
-		free(strings);
-		exit(EXIT_FAILURE);
-    });
+        public ValueWriter(int width = 2)
+        {
+#if DEBUGGING
+            levelStack = new Stack<VisualNode3>();
+#else
+            levelStack = new Stack<JsonNode>();
 #endif
-
-    FILE *fp = (argc > 1 && strcmp(argv[1], "-")) ? fopen(argv[1], "rb") : stdin;
-    if (!fp) {
-        fprintf(stderr, "%s: %s: %s\n", argv[0], argv[1], strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    char *source = nullptr;
-    size_t sourceSize = 0;
-    size_t bufferSize = 0;
-    while (!feof(fp)) {
-        if (sourceSize + 1 >= bufferSize) {
-            bufferSize = bufferSize < BUFSIZ ? BUFSIZ : bufferSize * 2;
-            source = (char *)realloc(source, bufferSize);
+            SHIFT_WIDTH = width;
         }
-        sourceSize += fread(source + sourceSize, 1, bufferSize - sourceSize - 1, fp);
+        protected void BlockEnd(StreamWriter print2, JsonNode o, ref int indent, String newLine)
+        {
+            if (o.Tag == JsonTag.JSON_OBJECT)
+            {
+                if (indent > -1) {
+                    indent -= SHIFT_WIDTH;
+                    print2.Write(new String(' ', indent));
+                }
+                print2.Write("}" + ((o.next != null ? "," : "") + newLine));
+            }
+            else if (o.Tag == JsonTag.JSON_ARRAY)
+            {
+                if (indent > -1)
+                {
+                    indent -= SHIFT_WIDTH;
+                    print2.Write(new String(' ', indent));
+                }
+                print2.Write("]" + ((o.next != null ? "," : "") + newLine));
+            }
+        }
+        public void DumpValueIterative(StreamWriter print2, JsonNode o, Byte[] src, int indent = 0)
+        {
+            String space, newLine;
+            if (indent > -1) { space = " "; newLine = "\n"; }
+              else           { space = "";  newLine = ""; }
+            JsonTag startTag;
+            do
+            {
+#if DEBUGGING
+                VisualNode3 oV = new VisualNode3(ref o, src, 10000);
+#endif
+                if (indent > -1) print2.Write(new String(' ', indent)); // Start with indent 
+                startTag = o.Tag;
+                if (startTag == JsonTag.JSON_OBJECT || startTag == JsonTag.JSON_ARRAY) {
+                    String open = "";
+                    if (startTag == JsonTag.JSON_ARRAY) open = "[]"; else open = "{}";
+                    if (o.ToNode() == null) {
+                        if (o.HasKey) print2.Write($"\"{o.Key(src)}\":{space}"); // [] or key: []
+                        if (o.next == null) print2.Write($"{open}{newLine}");
+                        else print2.Write($"{open},{newLine}");
+                        if (o.next == null) o = o.node;
+                    } else {
+                        open = open.Substring(0, 1);
+                        if (o.HasKey) print2.Write($"\"{o.Key(src)}\":{space}{open}");
+                        else print2.Write($"{open}");
+                        if(o.ToNode() != null) print2.Write(newLine);
+                        if (o.ToNode() == null && o.next != null) BlockEnd(print2, o, ref indent, newLine);
+                        if (indent > -1) indent += SHIFT_WIDTH;
+                    }
+                } else if(startTag == JsonTag.JSON_STRING || startTag == JsonTag.JSON_NUMBER || startTag == JsonTag.JSON_NUMBER_STR) {
+                    String quote = (startTag == JsonTag.JSON_STRING) ? "\"" : "";
+                    if (o.HasKey) {
+                        print2.Write($"\"{o.Key(src)}\":{space}{quote}{o.ToString(src)}{quote}{(o.next!=null?",":"")}{newLine}"); // "key": "value"(,)
+                    } else print2.Write($"{quote}{o.ToString(src)}{quote}{(o.next!=null?",":"")}{newLine}"); // "value"(,)
+                } else if(startTag == JsonTag.JSON_TRUE || startTag == JsonTag.JSON_FALSE || startTag == JsonTag.JSON_NULL) {
+                    String word;
+                    if (startTag == JsonTag.JSON_TRUE) word = "true";
+                    else if (startTag == JsonTag.JSON_FALSE) word = "false";
+                    else word = "null";
+                    if (o.HasKey) {
+                        print2.Write($"\"{o.Key(src)}\":{space}{word}{(o.next!=null?",":"")}{newLine}"); // "key": "value"(,)
+                    } else print2.Write($"{word}{(o.next!=null?",":"")}{newLine}"); // "value"(,)
+                }
+                if(o != null) {
+                    if (o.node != null && (startTag == JsonTag.JSON_ARRAY || startTag == JsonTag.JSON_OBJECT))
+                    { // move down 2 node of structured object
+#if DEBUGGING
+                        levelStack.Push(new VisualNode3(ref o, src, 1000));
+#else
+                        levelStack.Push(o);
+#endif
+                        o = o.node;
+                    } else { // move right to values
+                        if (o.next != null) o = o.next;
+                        else o = o.node; // always null (4 null || non-structured)
+                    }
+                }
+                while (o == null && levelStack.Count > 0)
+                { // return back after iterations
+                    do {
+#if DEBUGGING
+                        o = levelStack.Pop().m_JsonNode;
+                        oV.ChangeNode(o);
+#else
+                        o = levelStack.Pop();
+#endif
+                        if (o.Tag == JsonTag.JSON_ARRAY || o.Tag == JsonTag.JSON_OBJECT)
+                        { // Array / Object end markers
+                            BlockEnd(print2, o, ref indent, newLine);
+                        } else {
+                            BlockEnd(print2, o, ref indent, newLine); // Array / Object end markers
+                        }
+                    } while ((levelStack.Count > 1) && ((o == null || (o.next == null && (o.node == null || o.node.next == null)))));
+                    o = o.next; // move right
+                }
+            } while (o != null || (levelStack.Count > 0)) ;
+        }
+        public void DumpValue(StreamWriter print2, JsonNode o, Byte[] src, int indent = 0)
+        {
+            JsonNode i;
+            if (o.Tag == JsonTag.JSON_NUMBER)
+            {
+                print2.Write(o.ToNumber().ToString(System.Globalization.CultureInfo.InvariantCulture));
+            } else if(o.Tag == JsonTag.JSON_NUMBER_STR)
+            {
+                print2.Write(o.ToString(src));
+            } else if(o.Tag == JsonTag.JSON_STRING)
+            {
+                print2.Write($"\"{ o.ToString(src) }\"");
+            } else if (o.Tag == JsonTag.JSON_ARRAY)
+            {
+                // It is not necessary to use o.toNode() to check if an array or object
+                // is empty before iterating over its members, we do it here to allow
+                // nicer pretty printing.
+                if (null == o.ToNode())
+                {
+                    print2.Write("[]");
+                    return;
+                }
+                if (indent > -1)
+                {
+                    print2.Write("[\n");
+                }
+                else
+                {
+                    print2.Write('[');
+                }
+                i = o.node;
+                while (null != i)
+                {
+                    if (indent > -1)
+                        print2.Write(new String(' ', indent + SHIFT_WIDTH));
+                    DumpValue(print2, i, src, indent > -1 ? indent + SHIFT_WIDTH : indent);
+                    if (indent > -1)
+                    {
+                        print2.Write(i.next != null ? ",\n" : "\n");
+                    }
+                    else if (i.next != null)
+                    {
+                        print2.Write(",");
+                    }
+                    i = i.next;
+                }
+                print2.Write((indent > -1) ? (new String(' ', indent) + ']') : "]");
+            } else if (o.Tag == JsonTag.JSON_OBJECT)
+            {
+                if (null == o.ToNode())
+                {
+                    print2.Write("{}");
+                    return;
+                }
+                if (indent > -1)
+                {
+                    print2.Write("{\n");
+                }
+                else
+                {
+                    print2.Write("{");
+                }
+                i = o.node;
+                while (null != i)
+                {
+                    if (indent > -1)
+                        print2.Write(new String(' ', indent + SHIFT_WIDTH));
+                    print2.Write($"\"{ i.Key(src) }\"");
+                    if (indent > -1)
+                    {
+                        print2.Write(": ");
+                    }
+                    else
+                    {
+                        print2.Write(':');
+                    }
+                    DumpValue(print2, i, src, indent > -1 ? indent + SHIFT_WIDTH : indent);
+                    if (indent > -1)
+                    {
+                        print2.Write(i.next != null ? ",\n" : "\n");
+                    }
+                    else if (i.next != null)
+                    {
+                        print2.Write(",");
+                    }
+                    i = i.next;
+                }
+                print2.Write(((indent > -1) ? new String(' ', indent) : "") + '}');
+            } else if (o.Tag == JsonTag.JSON_TRUE) {
+                print2.Write("true");
+            } else if (o.Tag == JsonTag.JSON_FALSE)
+            {
+                print2.Write("false");
+            } else if (o.Tag == JsonTag.JSON_NULL)
+            {
+                print2.Write("null");
+            }
+        }
     }
-    fclose(fp);
-    source[sourceSize] = 0;
-
-    char *endptr;
-    JsonValue value;
-    JsonAllocator allocator;
-    int status = jsonParse(source, &endptr, &value, allocator);
-    if (status != JSON_OK) {
-        printError((argc > 1 && strcmp(argv[1], "-")) ? argv[1] : "-stdin-", status, endptr, source, sourceSize);
-        exit(EXIT_FAILURE);
-    }
-    dumpValue(value);
-    fprintf(stdout, "\n");
-
-    return 0;
 }

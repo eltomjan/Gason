@@ -1,334 +1,415 @@
-#include "gason.h"
-#include <stdlib.h>
+﻿using System;
 
-#define JSON_ZONE_SIZE 4096
-#define JSON_STACK_SIZE 32
-
-const char *jsonStrError(int err) {
-    switch (err) {
-#define XX(no, str) \
-    case JSON_##no: \
-        return str;
-        JSON_ERRNO_MAP(XX)
-#undef XX
-    default:
-        return "unknown";
-    }
-}
-
-void *JsonAllocator::allocate(size_t size) {
-    size = (size + 7) & ~7;
-
-    if (head && head->used + size <= JSON_ZONE_SIZE) {
-        char *p = (char *)head + head->used;
-        head->used += size;
-        return p;
-    }
-
-    size_t allocSize = sizeof(Zone) + size;
-    Zone *zone = (Zone *)malloc(allocSize <= JSON_ZONE_SIZE ? JSON_ZONE_SIZE : allocSize);
-    if (zone == nullptr)
-        return nullptr;
-    zone->used = allocSize;
-    if (allocSize <= JSON_ZONE_SIZE || head == nullptr) {
-        zone->next = head;
-        head = zone;
-    } else {
-        zone->next = head->next;
-        head->next = zone;
-    }
-    return (char *)zone + sizeof(Zone);
-}
-
-void JsonAllocator::deallocate() {
-    while (head) {
-        Zone *next = head->next;
-        free(head);
-        head = next;
-    }
-}
-
-static inline bool isspace(char c) {
-    return c == ' ' || (c >= '\t' && c <= '\r');
-}
-
-static inline bool isdelim(char c) {
-    return c == ',' || c == ':' || c == ']' || c == '}' || isspace(c) || !c;
-}
-
-static inline bool isdigit(char c) {
-    return c >= '0' && c <= '9';
-}
-
-static inline bool isxdigit(char c) {
-    return (c >= '0' && c <= '9') || ((c & ~' ') >= 'A' && (c & ~' ') <= 'F');
-}
-
-static inline int char2int(char c) {
-    if (c <= '9')
-        return c - '0';
-    return (c & ~' ') - 'A' + 10;
-}
-
-static double string2double(char *s, char **endptr) {
-    char ch = *s;
-    if (ch == '-')
-        ++s;
-
-    double result = 0;
-    while (isdigit(*s))
-        result = (result * 10) + (*s++ - '0');
-
-    if (*s == '.') {
-        ++s;
-
-        double fraction = 1;
-        while (isdigit(*s)) {
-            fraction *= 0.1;
-            result += (*s++ - '0') * fraction;
+namespace Gason
+{
+    public class Parser
+    {
+        readonly bool FloatAsDecimal = false;
+        readonly int JSON_STACK_SIZE;
+#if DEBUGGING
+        public VisualNode3[] tails;
+        public LinkedByteString[] keys;
+#else
+        public JsonNode[] tails;
+        public P_ByteLnk[] keys;
+#endif
+        public JsonTag[] tags;
+        JsonNode o;
+#if DEBUGGING
+        public VisualNode3 root;
+#endif
+        public int pos = -1;
+        public bool separator = true;
+        public Byte prevType = 255;
+        public int len;
+        public int strPos;
+        Byte type;
+#if KEY_SPLIT
+        Boolean insideLimitBlock, bubbleOut;
+#endif
+        public void Init(ref Byte[] s)
+        {
+            o = new JsonNode();
+#if DEBUGGING
+            tails = new VisualNode3[JSON_STACK_SIZE];
+            LinkedByteString.storage = s;
+            keys = new LinkedByteString[JSON_STACK_SIZE];
+            root = new VisualNode3(ref o, s, 3000); // Predefined JSON preview size limit (interactive then, also indent 0/-1 or m_Shift_Width)
+#else
+            tails = new JsonNode[JSON_STACK_SIZE];
+            keys = new P_ByteLnk[JSON_STACK_SIZE];
+#endif
+            tags = new JsonTag[JSON_STACK_SIZE];
+            pos = -1;
+#if !SKIP_VALIDATION
+            separator = true;
+            prevType = 255;
+#endif
+            type = 255;
+            len = s.Length;
+            strPos = 0;
+#if KEY_SPLIT
+            insideLimitBlock = false;
+            bubbleOut = false;
+#endif
         }
-    }
-
-    if (*s == 'e' || *s == 'E') {
-        ++s;
-
-        double base = 10;
-        if (*s == '+')
-            ++s;
-        else if (*s == '-') {
-            ++s;
-            base = 0.1;
+        public Parser(bool FloatAsDecimal, int JSON_STACK_SIZE = 32)
+        {
+            this.FloatAsDecimal = FloatAsDecimal;
+            this.JSON_STACK_SIZE = JSON_STACK_SIZE;
         }
-
-        unsigned int exponent = 0;
-        while (isdigit(*s))
-            exponent = (exponent * 10) + (*s++ - '0');
-
-        double power = 1;
-        for (; exponent; exponent >>= 1, base *= base)
-            if (exponent & 1)
-                power *= base;
-
-        result *= power;
-    }
-
-    *endptr = s;
-    return ch == '-' ? -result : result;
-}
-
-static inline JsonNode *insertAfter(JsonNode *tail, JsonNode *node) {
-    if (!tail)
-        return node->next = node;
-    node->next = tail->next;
-    tail->next = node;
-    return node;
-}
-
-static inline JsonValue listToValue(JsonTag tag, JsonNode *tail) {
-    if (tail) {
-        auto head = tail->next;
-        tail->next = nullptr;
-        return JsonValue(tag, head);
-    }
-    return JsonValue(tag, nullptr);
-}
-
-int jsonParse(char *s, char **endptr, JsonValue *value, JsonAllocator &allocator) {
-    JsonNode *tails[JSON_STACK_SIZE];
-    JsonTag tags[JSON_STACK_SIZE];
-    char *keys[JSON_STACK_SIZE];
-    JsonValue o;
-    int pos = -1;
-    bool separator = true;
-    JsonNode *node;
-    *endptr = s;
-
-    while (*s) {
-        while (isspace(*s)) {
-            ++s;
-            if (!*s) break;
-        }
-        *endptr = s++;
-        switch (**endptr) {
-        case '-':
-            if (!isdigit(*s) && *s != '.') {
-                *endptr = s;
-                return JSON_BAD_NUMBER;
-            }
-        case '0':
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case '9':
-            o = JsonValue(string2double(*endptr, &s));
-            if (!isdelim(*s)) {
-                *endptr = s;
-                return JSON_BAD_NUMBER;
-            }
-            break;
-        case '"':
-            o = JsonValue(JSON_STRING, s);
-            for (char *it = s; *s; ++it, ++s) {
-                int c = *it = *s;
-                if (c == '\\') {
-                    c = *++s;
-                    switch (c) {
-                    case '\\':
-                    case '"':
-                    case '/':
-                        *it = c;
+        public JsonErrno Parse(Byte[] s, ref int endPos, out JsonNode value
+#if KEY_SPLIT
+            , ByteString[] keysLog, int level, int startPos, int length
+#endif
+            )
+        {
+            if (endPos <= 0) Init(ref s);
+            value = null;
+            while (strPos < len)
+            {
+#if !SKIP_VALIDATION
+                if(type > 1) prevType = type;
+#endif
+                type = SearchTables.valTypes[s[strPos]];
+                if (type <= 1)
+                {
+                    strPos++;
+                    continue; // white space
+                }
+                endPos = strPos++;
+                switch (type) // switch (**endptr) {
+                {
+                    case 2: // case '-':
+                        if(FloatAsDecimal) {
+                            endPos = o.String2decimal(ref strPos, s, true);
+                        } else {
+                            endPos = o.String2double(ref strPos, s, true);
+                        }
+#if !SKIP_VALIDATION
+                        if (0 == (SearchTables.specialTypes[s[endPos]] & 3)) // isdelim
+                        {
+                            endPos = strPos;
+                            return JsonErrno.BAD_NUMBER;
+                        }
+#endif
                         break;
-                    case 'b':
-                        *it = '\b';
+                    case 4: // 0-9
+                        strPos--;
+                        if(FloatAsDecimal) {
+                            endPos = o.String2decimal(ref strPos, s);
+                        } else {
+                            endPos = o.String2double(ref strPos, s);
+                        }
+#if !SKIP_VALIDATION
+                        if (0 == (SearchTables.specialTypes[s[endPos]] & 3)) // isdelim
+                        {
+                            endPos = strPos;
+                            return JsonErrno.BAD_NUMBER;
+                        }
+#endif
                         break;
-                    case 'f':
-                        *it = '\f';
+                    case 3: // case '"':
+                        JsonErrno e = o.GetString(ref strPos, s);
+                        if (e != JsonErrno.OK) return e;
+#if !SKIP_VALIDATION
+                        if (0 == (SearchTables.specialTypes[s[strPos]] & 3)) // !isdelim
+                        {
+                            endPos = strPos;
+                            return JsonErrno.BAD_STRING;
+                        }
+#endif
                         break;
-                    case 'n':
-                        *it = '\n';
+                    case 7: // 't'
+                        if ((SearchTables.specialTypes[s[strPos + 3]] & 3) != 0 // isdelim
+                        && (s[strPos + 0] == 'r')
+                        && (s[strPos + 1] == 'u')
+                        && (s[strPos + 2] == 'e'))
+                        {
+                            o.Tag = JsonTag.JSON_TRUE;
+                            strPos += 3;
+#if !SKIP_VALIDATION
+                        }
+                        else {
+                            return JsonErrno.BAD_IDENTIFIER;
+#endif
+                        }
                         break;
-                    case 'r':
-                        *it = '\r';
+                    case 6: // 'f'
+                        if ((SearchTables.specialTypes[s[strPos + 4]] & 3) != 0 // isdelim
+                        && (s[strPos + 0] == 'a')
+                        && (s[strPos + 1] == 'l')
+                        && (s[strPos + 2] == 's')
+                        && (s[strPos + 3] == 'e'))
+                        {
+                            o.Tag = JsonTag.JSON_FALSE;
+                            strPos += 4;
+#if !SKIP_VALIDATION
+                        }
+                        else {
+                            return JsonErrno.BAD_IDENTIFIER;
+#endif
+                        }
                         break;
-                    case 't':
-                        *it = '\t';
+                    case 8: // 'n'
+#if !SKIP_VALIDATION
+                        if (prevType == 3 && !separator) { // {"Missing colon" null} + fail19.json
+                            return JsonErrno.UNEXPECTED_CHARACTER;
+                        }
+#endif
+                        if ((SearchTables.specialTypes[s[strPos + 3]] & 3) != 0 // isdelim
+                        && (s[strPos + 0] == 'u')
+                        && (s[strPos + 1] == 'l')
+                        && (s[strPos + 2] == 'l'))
+                        {
+                            o.Tag = JsonTag.JSON_NULL;
+                            strPos += 3;
+#if !SKIP_VALIDATION
+                        }
+                        else {
+                            return JsonErrno.BAD_IDENTIFIER;
+#endif
+                        }
                         break;
-                    case 'u':
-                        c = 0;
-                        for (int i = 0; i < 4; ++i) {
-                            if (isxdigit(*++s)) {
-                                c = c * 16 + char2int(*s);
-                            } else {
-                                *endptr = s;
-                                return JSON_BAD_STRING;
+                    case 12: // ']'
+#if !SKIP_VALIDATION
+                        if (pos == -1)
+                            return JsonErrno.STACK_UNDERFLOW;
+                        if (tags[pos] != JsonTag.JSON_ARRAY)
+                            return JsonErrno.MISMATCH_BRACKET;
+                        if (separator && prevType != 11) // '['
+                            return JsonErrno.UNEXPECTED_CHARACTER; // fail4
+#endif
+#if DEBUGGING
+                        o.ListToValue(JsonTag.JSON_ARRAY, tails[pos] != null ? tails[pos].m_JsonNode : null);
+                        pos--;
+#else
+                        o.ListToValue(JsonTag.JSON_ARRAY, tails[pos--]);
+#endif
+#if !SKIP_VALIDATION
+                        if (type > 1) prevType = type;
+#endif
+                        break;
+                    case 13: // '}'
+#if !SKIP_VALIDATION
+                        if (pos == -1)
+                            return JsonErrno.STACK_UNDERFLOW;
+                        if (tags[pos] != JsonTag.JSON_OBJECT)
+                            return JsonErrno.MISMATCH_BRACKET;
+                        if (keys[pos].length != -1)
+                            return JsonErrno.UNEXPECTED_CHARACTER;
+                        if (separator && prevType != 10) // '{'
+                            return JsonErrno.UNEXPECTED_CHARACTER;
+#endif
+#if DEBUGGING
+                        o.ListToValue(JsonTag.JSON_OBJECT, tails[pos] != null ? tails[pos].m_JsonNode : null);
+                        pos--;
+#else
+                        o.ListToValue(JsonTag.JSON_OBJECT, tails[pos--]);
+#endif
+#if KEY_SPLIT
+                        if (insideLimitBlock && (level == pos + 1))
+                        {
+                            if (length == 1) {
+                                bubbleOut = true;
+                            } else if (length > 1){
+                                length--;
                             }
                         }
-                        if (c < 0x80) {
-                            *it = c;
-                        } else if (c < 0x800) {
-                            *it++ = 0xC0 | (c >> 6);
-                            *it = 0x80 | (c & 0x3F);
-                        } else {
-                            *it++ = 0xE0 | (c >> 12);
-                            *it++ = 0x80 | ((c >> 6) & 0x3F);
-                            *it = 0x80 | (c & 0x3F);
-                        }
+#endif
                         break;
+                    case 11: // '['
+#if !SKIP_VALIDATION
+                        if (++pos == JSON_STACK_SIZE)
+                            return JsonErrno.STACK_OVERFLOW;
+#else
+                        pos++;
+#endif
+                        tails[pos] = null;
+                        tags[pos] = JsonTag.JSON_ARRAY;
+                        keys[pos].length = -1;
+#if !SKIP_VALIDATION
+                        separator = true;
+#endif
+                        continue;
+                    case 10: // '{'
+#if !SKIP_VALIDATION
+                        if (++pos == JSON_STACK_SIZE)
+                            return JsonErrno.STACK_OVERFLOW;
+#else
+                        pos++;
+#endif
+#if KEY_SPLIT
+                        if (pos == level && !insideLimitBlock)
+                        {
+                            int i = level - 1;
+                            while (i >= 0)
+                            {
+                                if (keys[i].length != -1)
+                                {
+#if DEBUGGING
+                                    if (keysLog[i].Equals(s, keys[i].idxes)) i--;
+#else
+                                    if (keysLog[i].Equals(s, keys[i])) i--;
+#endif
+                                    else break;
+                                } else if (keysLog[i] == null) i--; else break;
+                            }
+                            if(i == -1)
+                            { // Keys & level match
+                                insideLimitBlock = true;
+                                if (startPos > 0) strPos = startPos;
+                            }
+                        }
+#endif
+                        tails[pos] = null;
+                        tags[pos] = JsonTag.JSON_OBJECT;
+                        keys[pos].length = -1;
+#if !SKIP_VALIDATION
+                        separator = true;
+#endif
+                        continue;
+                    case 14: // ':'
+#if !SKIP_VALIDATION
+                        if (separator || keys[pos].length == -1)
+                            return JsonErrno.UNEXPECTED_CHARACTER;
+                        separator = true;
+#endif
+                        continue;
+                    case 15: // ','
+#if !SKIP_VALIDATION
+                        if (separator || keys[pos].length != -1)
+                            return JsonErrno.UNEXPECTED_CHARACTER;
+                        separator = true;
+#endif
+                        continue;
+#if !SKIP_VALIDATION
                     default:
-                        *endptr = s;
-                        return JSON_BAD_STRING;
-                    }
-                } else if ((unsigned int)c < ' ' || c == '\x7F') {
-                    *endptr = s;
-                    return JSON_BAD_STRING;
-                } else if (c == '"') {
-                    *it = 0;
-                    ++s;
-                    break;
+                        return JsonErrno.UNEXPECTED_CHARACTER;
+#endif
                 }
-            }
-            if (!isdelim(*s)) {
-                *endptr = s;
-                return JSON_BAD_STRING;
-            }
-            break;
-        case 't':
-            if (!(s[0] == 'r' && s[1] == 'u' && s[2] == 'e' && isdelim(s[3])))
-                return JSON_BAD_IDENTIFIER;
-            o = JsonValue(JSON_TRUE);
-            s += 3;
-            break;
-        case 'f':
-            if (!(s[0] == 'a' && s[1] == 'l' && s[2] == 's' && s[3] == 'e' && isdelim(s[4])))
-                return JSON_BAD_IDENTIFIER;
-            o = JsonValue(JSON_FALSE);
-            s += 4;
-            break;
-        case 'n':
-            if (!(s[0] == 'u' && s[1] == 'l' && s[2] == 'l' && isdelim(s[3])))
-                return JSON_BAD_IDENTIFIER;
-            o = JsonValue(JSON_NULL);
-            s += 3;
-            break;
-        case ']':
-            if (pos == -1)
-                return JSON_STACK_UNDERFLOW;
-            if (tags[pos] != JSON_ARRAY)
-                return JSON_MISMATCH_BRACKET;
-            o = listToValue(JSON_ARRAY, tails[pos--]);
-            break;
-        case '}':
-            if (pos == -1)
-                return JSON_STACK_UNDERFLOW;
-            if (tags[pos] != JSON_OBJECT)
-                return JSON_MISMATCH_BRACKET;
-            if (keys[pos] != nullptr)
-                return JSON_UNEXPECTED_CHARACTER;
-            o = listToValue(JSON_OBJECT, tails[pos--]);
-            break;
-        case '[':
-            if (++pos == JSON_STACK_SIZE)
-                return JSON_STACK_OVERFLOW;
-            tails[pos] = nullptr;
-            tags[pos] = JSON_ARRAY;
-            keys[pos] = nullptr;
-            separator = true;
-            continue;
-        case '{':
-            if (++pos == JSON_STACK_SIZE)
-                return JSON_STACK_OVERFLOW;
-            tails[pos] = nullptr;
-            tags[pos] = JSON_OBJECT;
-            keys[pos] = nullptr;
-            separator = true;
-            continue;
-        case ':':
-            if (separator || keys[pos] == nullptr)
-                return JSON_UNEXPECTED_CHARACTER;
-            separator = true;
-            continue;
-        case ',':
-            if (separator || keys[pos] != nullptr)
-                return JSON_UNEXPECTED_CHARACTER;
-            separator = true;
-            continue;
-        case '\0':
-            continue;
-        default:
-            return JSON_UNEXPECTED_CHARACTER;
-        }
+#if !SKIP_VALIDATION
+                separator = false;
+#endif
 
-        separator = false;
+                if (pos == -1)
+                {
+                    value = o;
+#if !SKIP_VALIDATION
+                    while (strPos < len - 1)
+                    {
+                        if (type == 13) { // '}' / {"Extra value after close": true} "misplaced quoted value"
+                            type = 0;
+                            while (strPos < len - 1) {
+                                type = SearchTables.valTypes[s[strPos]];
+                                if (type <= 1) {
+                                    strPos++;
+                                    continue;
+                                }
+                                if (type == 3)
+                                {
+                                    strPos++;
+                                    JsonNode trash = new JsonNode();
+                                    JsonErrno e = trash.GetString(ref strPos, s);
+                                    if (e != JsonErrno.OK) return e;
+                                    endPos = strPos;
+                                    if (strPos != len -1 || 0 == (SearchTables.specialTypes[s[strPos]] & 3)) // !isdelim
+                                    {
+                                        return JsonErrno.BAD_STRING;
+                                    } else return JsonErrno.OK;
+                                }
+                                else return JsonErrno.UNEXPECTED_CHARACTER;
+                            }
+                        }
+                        if ((strPos < len -1) && SearchTables.valTypes[s[strPos]] <= 1) strPos++;
+                        else
+                        {
+                            if (s[strPos] == 0) break;
+                            if (prevType != 12 || s[strPos] != ',') // ']'
+                                return JsonErrno.BREAKING_BAD;
+                            else strPos++;
+                        }
+                    }
+#endif
+                    return JsonErrno.OK;
+                }
+#if KEY_SPLIT
+                do
+                {
+#endif
+                if (tags[pos] == JsonTag.JSON_OBJECT)
+                    {
+                        if (keys[pos].length == -1)
+                        {
+#if !SKIP_VALIDATION
+                            if (o.Tag != JsonTag.JSON_STRING)
+                                return JsonErrno.UNQUOTED_KEY;
+#endif
+#if DEBUGGING
+                            keys[pos] = new LinkedByteString(o.doubleOrString);
+#else
+                            keys[pos].data = o.doubleOrString.data;
+#endif
+#if KEY_SPLIT
+                            if (bubbleOut) continue;
+                            else break;
+#else
+                            continue;
+#endif
+                    }
+#if DEBUGGING
+                    o.InsertAfter(tails[pos] != null ? tails[pos].m_JsonNode : null, ref keys[pos].idxes);
+#else
+                    o.InsertAfter(tails[pos] != null ? tails[pos] : null, ref keys[pos]);
+#endif
+                    }
+                    else
+                    {
+#if DEBUGGING
+                        o.InsertAfter(tails[pos] != null ? tails[pos].m_JsonNode : null);
+#else
+                        o.InsertAfter(tails[pos]);
+#endif
+                    }
+                    tails[pos] =
+#if DEBUGGING
+                        new VisualNode3(ref o, s, 3000);
+#else
+                        o;
+#endif
+                    o = new JsonNode();
+#if DEBUGGING
+                    root.ChangeNode(o);
+#endif
 
-        if (pos == -1) {
-            *endptr = s;
-            *value = o;
-            return JSON_OK;
-        }
-
-        if (tags[pos] == JSON_OBJECT) {
-            if (!keys[pos]) {
-                if (o.getTag() != JSON_STRING)
-                    return JSON_UNQUOTED_KEY;
-                keys[pos] = o.toString();
-                continue;
+#if KEY_SPLIT
+                    if (bubbleOut)
+                    {
+                        if (tags[pos] == JsonTag.JSON_ARRAY
+                        || tags[pos] == JsonTag.JSON_OBJECT)
+                        { // lists close brackets
+#if DEBUGGING
+                            o.ListToValue(tags[pos], tails[pos] != null ? tails[pos].m_JsonNode : null);
+#else
+                            o.ListToValue(tags[pos], tails[pos]);
+#endif
+                        }
+                        if (pos-- == 0)
+                        {
+                            while ((strPos < len) && s[strPos++] != ',') ; // find array separator
+                            while ((strPos < len) && ((JsonValue.specialTypes[s[strPos]] & 3) != 0)) strPos++; // skip delims
+                            while ((strPos < len) && (s[strPos] != '{')) strPos++; // array start
+                            if (strPos < len) strPos++;
+                            endPos = strPos;
+                            value = o;
+                            return JsonErrno.OK;
+                        }
+                    }
+                    else break;
+                } while (true); // exit by breaks
+#endif
             }
-            if ((node = (JsonNode *) allocator.allocate(sizeof(JsonNode))) == nullptr)
-                return JSON_ALLOCATION_FAILURE;
-            tails[pos] = insertAfter(tails[pos], node);
-            tails[pos]->key = keys[pos];
-            keys[pos] = nullptr;
-        } else {
-            if ((node = (JsonNode *) allocator.allocate(sizeof(JsonNode) - sizeof(char *))) == nullptr)
-                return JSON_ALLOCATION_FAILURE;
-            tails[pos] = insertAfter(tails[pos], node);
+            return JsonErrno.BREAKING_BAD;
         }
-        tails[pos]->value = o;
     }
-    return JSON_BREAKING_BAD;
 }

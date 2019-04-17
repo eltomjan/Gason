@@ -1,0 +1,63 @@
+VS 2017 Release 64b mode, i76820 @2.7GHz, 24GB RAM
+
+DBexport.json (3 555 386 rows)
+Newtonsoft:
+- Read  00:00:01.2316864s
+- Parse 00:00:29.3366170s
+
+Gason C# (7.91x quicker or 12,639% of Newtonsoft parse time)
+Parse 10x = 00:00:31.8121835
+
+(Whole run 1:17 = 77s - also deallocation tooked similar time - >50.58...% in average)
+  Number    String   Object   Array   False    True    Null    Size  Update    Parse   Speed
+       -         -        -       -       -       -       -       -       -        -       - DBexport.json, 262471058 x 10
+70978450 213194620 35553960      20       0       0       0 2503.12  943.39 20694.69  120.95 rapid normal
+70978450 213194620 35553960      20       0       0       0 2503.12  969.93 21319.15  117.41 rapid insitu
+70978450 213194620 35553960      20       0       0       0 2503.12  786.87  9120.78  274.44 gason
+
+
+https://github.com/zemirco/sf-city-lots-json/blob/master/citylots.json
+GasonC# (VS C# profiler around 3s per parse):
+Parse 10x = 00:00:27.6647154s (5.763233507x slower than C++ version)
+
+Original benchmark (VS C++ profiler around 1s per parse 4 Gason C++, average of 3 runs 5.004813333):
+  Number   String  Object    Array   False    True    Null    Size  Update    Parse   Speed
+       -        -       -        -       -       -       -       -       -        -       - citylots.json, 189778220 x 10
+78751890 51096550 6196750 30388590       0       0  543360 1809.87  775.09 10550.97  171.54 rapid normal
+78751890 51096550 6196750 30388590       0       0  543360 1809.87  769.15 11037.80  163.97 rapid insitu
+78751890 51096550 6196750 30388590       0       0  543360 1809.87  674.58  4963.78  364.61 gason
+  Number   String  Object    Array   False    True    Null    Size  Update    Parse   Speed
+       -        -       -        -       -       -       -       -       -        -       - citylots.json, 189778220 x 10
+78751890 51096550 6196750 30388590       0       0  543360 1809.87  776.60 10568.69  171.25 rapid normal
+78751890 51096550 6196750 30388590       0       0  543360 1809.87  762.12 10973.96  164.92 rapid insitu
+78751890 51096550 6196750 30388590       0       0  543360 1809.87  667.26  4955.27  365.24 gason
+  Number   String  Object    Array   False    True    Null    Size  Update    Parse   Speed
+       -        -       -        -       -       -       -       -       -        -       - citylots.json, 189778220 x 10
+78751890 51096550 6196750 30388590       0       0  543360 1809.87  772.83 10545.48  171.62 rapid normal
+78751890 51096550 6196750 30388590       0       0  543360 1809.87  778.35 11306.32  160.08 rapid insitu
+78751890 51096550 6196750 30388590       0       0  543360 1809.87  714.02  5095.39  355.20 gason
+
+
+GasonC# - too small = a bit random results (VS C# profiler shows 380ms per parse):
+Parse 10x = 00:00:00.0609570s
+Parse 10x = 00:00:00.0442593s
+Parse 10x = 00:00:00.0469578
+
+Original benchmark:
+ Number  String  Object   Array   False    True    Null    Size  Update   Parse   Speed
+      -       -       -       -       -       -       -       -       -       -       - pass6vsFrmt.json, 631515 x 10
+  21090  180990   12640   10500   24460    3450   19460    6.02    2.45   34.56  174.27 rapid normal
+  21090  180990   12640   10500   24460    3450   19460    6.02    1.80   28.41  211.99 rapid insitu
+  21090  180990   12640   10500   24460    3450   19460    6.02    1.45   21.51  280.02 gason
+
+ Number  String  Object   Array   False    True    Null    Size  Update   Parse   Speed
+      -       -       -       -       -       -       -       -       -       -       - pass6vsFrmt.json, 631515 x 10
+  21090  180990   12640   10500   24460    3450   19460    6.02    1.89   35.81  168.20 rapid normal
+  21090  180990   12640   10500   24460    3450   19460    6.02    1.16   27.85  216.25 rapid insitu
+  21090  180990   12640   10500   24460    3450   19460    6.02    1.16   15.14  397.85 gason
+
+ Number  String  Object   Array   False    True    Null    Size  Update   Parse   Speed
+      -       -       -       -       -       -       -       -       -       -       - pass6vsFrmt.json, 631515 x 10
+  21090  180990   12640   10500   24460    3450   19460    6.02    2.39   36.78  163.74 rapid normal
+  21090  180990   12640   10500   24460    3450   19460    6.02    1.71   26.12  230.56 rapid insitu
+  21090  180990   12640   10500   24460    3450   19460    6.02    1.13   16.92  355.99 gason
