@@ -15,30 +15,30 @@ public class Program
         Byte[] raw;
         Parser jsonParser = new Parser(true); // FloatAsDecimal
 
-        json = "{\n" +
-               "  \"id\": \"0001\",\n" +
-               "  \"type\": \"donut\",\n" +
-               "  \"name\": \"Cake\",\n" +
-               "  \"ppu\": 0.55,\n" +
-               "  \"batters\": [\n" +
-               "      { \n" +
-               "        \"id\": \"1001\",\n" +
-               "        \"type\": \"Regular\"\n" +
-               "      },\n" +
-               "      { \n" +
-               "        \"id\": \"1002\",\n" +
-               "        \"type\": \"Chocolate\"\n" +
-               "      },\n" +
-               "      { \n" +
-               "        \"id\": \"1003\",\n" +
-               "        \"type\": \"Blueberry\"\n" +
-               "      },\n" +
-               "      { \n" +
-               "        \"id\": \"1004\",\n" +
-               "        \"type\": \"Devil's Food\"\n" +
-               "      }\n" +
-               "  ]\n" +
-               "}";
+        json = @"{
+                 ""id"": ""0001"", 
+                 ""type"": ""donut"", 
+                 ""name"": ""Cake"", 
+                 ""ppu"": 0.55, 
+                 ""batters"": [ 
+                     {  
+                       ""id"": ""1001"", 
+                       ""type"": ""Regular"" 
+                     }, 
+                     {  
+                       ""id"": ""1002"", 
+                       ""type"": ""Chocolate"" 
+                     }, 
+                     {  
+                       ""id"": ""1003"", 
+                       ""type"": ""Blueberry"" 
+                     }, 
+                     {  
+                       ""id"": ""1004"", 
+                       ""type"": ""Devil's Food"" 
+                     } 
+                 ] 
+               }";
 
         raw = Encoding.UTF8.GetBytes(json);
         ByteString[] keys = new ByteString[]
@@ -57,7 +57,9 @@ public class Program
             sw.AutoFlush = true;
             wr.DumpValueIterative(sw, jsn, raw);
         }
+#if !KEY_SPLIT
         endPos = -1;
+#endif
         jsonParser.Parse(raw, ref endPos, out jsn
 #if KEY_SPLIT
             , keys, 2, endPos, 2

@@ -27,7 +27,7 @@ namespace Gason
 #if KEY_SPLIT
         Boolean insideLimitBlock, bubbleOut;
 #endif
-        public void Init(ref Byte[] s)
+        public void Init(ref Byte[] s, bool nextInit)
         {
             o = new JsonNode();
 #if DEBUGGING
@@ -36,8 +36,8 @@ namespace Gason
             keys = new LinkedByteString[JSON_STACK_SIZE];
             root = new VisualNode3(ref o, s, 3000); // Predefined JSON preview size limit (interactive then, also indent 0/-1 or m_Shift_Width)
 #else
-            tails = new JsonNode[JSON_STACK_SIZE];
-            keys = new P_ByteLnk[JSON_STACK_SIZE];
+        tails = new JsonNode[JSON_STACK_SIZE];
+        keys = new P_ByteLnk[JSON_STACK_SIZE];
 #endif
             tags = new JsonTag[JSON_STACK_SIZE];
             pos = -1;
@@ -64,7 +64,8 @@ namespace Gason
 #endif
             )
         {
-            if (endPos <= 0) Init(ref s);
+            int endPosMem = endPos;
+            Init(ref s, (endPos > 0));
             value = null;
             while (strPos < len)
             {
@@ -258,7 +259,7 @@ namespace Gason
                             if(i == -1)
                             { // Keys & level match
                                 insideLimitBlock = true;
-                                if (startPos > 0) strPos = startPos;
+                                if (startPos > 0) strPos = endPosMem;
                             }
                         }
 #endif
