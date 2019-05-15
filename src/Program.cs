@@ -70,24 +70,21 @@ public class Program
             sw.AutoFlush = true;
             wr.DumpValueIterative(sw, jsn, raw);
         }
+        BrowseNode v1 = new BrowseNode(ref jsn, raw);
 
         raw = File.ReadAllBytes(@"citylots.json");
         Benchmark b = new Benchmark(raw);
         b.Run(); // < 30s
 
-        raw = File.ReadAllBytes(@"big.json");
-        jsonParser.Parse(raw, ref endPos, out jsn
-#if KEY_SPLIT
-            , null, 0, 0, -1
-#endif
-            );
-
-        wr = new ValueWriter();
-        using (StreamWriter sw = new StreamWriter(Console.OpenStandardOutput()))
+        BreadthFirst bf = new BreadthFirst(v1);
+        bf.Current = bf.Root;
+        BrowseNode traversal = bf.Root, prev;
+        do
         {
-            sw.AutoFlush = true;
-            wr.DumpValue(sw, jsn, raw); // print formatted JSON
-        }
+            Console.WriteLine(traversal.DebugView1());
+            prev = traversal;
+            traversal = bf.Next();
+        } while (traversal != null);
 
         return;
     }
