@@ -28,7 +28,7 @@ namespace Gason
         }
         public BrowseNode Next()
         {
-            if(Current.Node_Viewer != null) {
+            if(current.Node_Viewer != null) {
                 Level++;
                 current = current.Node_Viewer;
             } else if(current.Next_Viewer != null) {

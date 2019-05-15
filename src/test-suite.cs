@@ -69,6 +69,7 @@ public class Tests
                         if (csource.TrimEnd('\n') != print.TrimEnd('\n'))
                         {
                             Console.WriteLine($"{no%100}:Dump bug:\n{csource}\nvs:\n{print}\n");
+                            ++failed;
                         }
                     }
                 }
