@@ -153,6 +153,7 @@ namespace Gason
                     return Parent_Viewer;
                 case 5: // only parent & me
                     retVal = Parent_Viewer;
+                    if (retVal.m_JsonNode.node == m_JsonNode) retVal.m_JsonNode.node = retVal.m_JsonNode.next;
                     m_JsonNode.next = null; // clear me -> a
                     retVal.m_JsonNode = null; // clear me
                     return retVal.RemoveCurrent();
