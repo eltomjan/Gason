@@ -90,6 +90,96 @@ namespace Gason
             }
             return retVal;
         }
+        public Boolean Equals(BrowseNode j2)
+        {
+            if (m_JsonNode.Tag != j2.m_JsonNode.Tag) return false;
+            int pos = m_JsonNode.KeyIndexesData.pos, pos2 = j2.m_JsonNode.KeyIndexesData.pos,
+                len = m_JsonNode.KeyIndexesData.length;
+            if (len != j2.m_JsonNode.KeyIndexesData.length) return false;
 
+            if (pos == 0) { // 0, x
+                if (pos2 > 0) return false;
+            } else if (pos2 == 0) return false; // x, 0
+
+            for (var i = 0; i < len; i++) {
+                if (src[i + pos] != j2.src[i + pos2]) return false;
+            }
+            switch (m_JsonNode.Tag) {
+                case JsonTag.JSON_STRING:
+                case JsonTag.JSON_NUMBER_STR:
+                    len = m_JsonNode.doubleOrString.length;
+                    if (len != j2.m_JsonNode.doubleOrString.length) return false;
+                    pos = m_JsonNode.doubleOrString.pos; pos2 = j2.m_JsonNode.doubleOrString.pos;
+                    if (pos == 0) { // 0, x
+                        if (pos2 > 0) return false;
+                    }
+                    else if (pos2 == 0) return false; // x, 0
+                    for (var i = 0; i < len; i++) {
+                        if (src[i + pos] != j2.src[i + pos2]) return false;
+                    }
+                    break;
+                case JsonTag.JSON_ARRAY:
+                case JsonTag.JSON_OBJECT:
+                    return true;
+                case JsonTag.JSON_NUMBER:
+                    return m_JsonNode.doubleOrString.data == j2.m_JsonNode.doubleOrString.data;
+                default: // JSON_TRUE, JSON_FALSE, JSON_NULL (same tag)
+                    return true;
+            }
+
+            return true;
+        }
+        public BrowseNode RemoveCurrent()
+        {
+            int arround = 0;
+            if (Parent_Viewer?.m_JsonNode != null) arround |= 1;
+            if (  Pred_Viewer?.m_JsonNode != null) arround |= 2;
+            if (               m_JsonNode != null) arround |= 4;
+            if (         m_JsonNode?.next != null) arround |= 8;
+
+            //VisualNode3 parent = null, pred = null, me = null;
+            //if (Parent_Viewer?.m_JsonNode != null) parent = new VisualNode3(ref Parent_Viewer.m_JsonNode, src, 10000);
+            //if (Pred_Viewer?.m_JsonNode != null) pred = new VisualNode3(ref Pred_Viewer.m_JsonNode, src, 10000);
+            //if (m_JsonNode != null) me = new VisualNode3(ref m_JsonNode, src, 10000);
+            //Console.WriteLine($"Arround {arround}");
+            //if (parent == pred && me != null && arround > 0) ;
+
+            BrowseNode retVal = null;
+            switch (arround)
+            {
+                case 3: // a -> me
+                    Pred_Viewer.m_JsonNode.next.node = null; // clear skipped node
+                    Pred_Viewer.m_JsonNode.next = Pred_Viewer.m_JsonNode.next?.next;
+                    return Parent_Viewer;
+                case 5: // only parent & me
+                    retVal = Parent_Viewer;
+                    m_JsonNode.next = null; // clear me -> a
+                    retVal.m_JsonNode = null; // clear me
+                    return retVal.RemoveCurrent();
+                case 7: // <-> a -> me => <-> a -> null
+                    Pred_Viewer.m_JsonNode.next = m_JsonNode.next;
+                    if (m_JsonNode.next == null)
+                    {
+                        m_JsonNode = null;
+                        return Pred_Viewer;
+                    }
+                    break; // unreachable
+                case 13: // me -> a
+                    Parent_Viewer.m_JsonNode.node = m_JsonNode.next;
+                    //m_JsonNode.next = null; // clear me -> a
+                    //m_JsonNode = null; // clear me
+                    return Next_Viewer;
+                case 15: // a -> me -> b => a -> b
+                    Pred_Viewer.m_JsonNode.next = m_JsonNode.next; // skip me
+                    retVal = Pred_Viewer.Next_Viewer;
+                    m_JsonNode.next = null; // clear me -> b
+                    m_JsonNode = null; // clear me
+                    return retVal;
+                default:
+                    Console.WriteLine("Buggy node ?!");
+                    break;
+            }
+            return null; // unreachable
+        }
     }
 }

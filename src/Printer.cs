@@ -28,7 +28,11 @@ namespace Gason
         public Printer() {}
         public StringBuilder Print(ref JsonNode start, Byte[] src, int indent)
         {
-            Root = new BrowseNode(ref start, src);
+            BrowseNode root = new BrowseNode(ref start, src);
+            return Print(ref root, indent);
+        }
+        public StringBuilder Print(ref BrowseNode Root, int indent)
+        {
             current = Root;
             Level = 0;
             printing = new StringBuilder();
@@ -41,6 +45,7 @@ namespace Gason
                     Level++;
                     current = current.Node_Viewer;
                     PrintOpen();
+                    if (current.m_JsonNode.node == null) PrintClose();
                 }
                 else if (current.Next_Viewer != null) {
                     current = current.Next_Viewer;
@@ -51,6 +56,7 @@ namespace Gason
                         if (current.Next_Viewer != null) {
                             current = current.Next_Viewer;
                             PrintOpen();
+                            if (current.m_JsonNode.node == null) PrintClose();
                             break;
                         }
                         Level--;
@@ -84,6 +90,7 @@ namespace Gason
             if (current.HasKey)
             {
                 if (current.m_JsonNode.Tag == JsonTag.JSON_ARRAY) printing.Append($"\"{current.Key_Viewer}\"").Append(':').Append(indent > 0 ? " [\n" : " [");
+                else if (current.m_JsonNode.Tag == JsonTag.JSON_OBJECT) printing.Append(indent > 0 ? "{\n" : "{");
                 else
                 {
                     if (current.m_JsonNode.Tag == JsonTag.JSON_STRING) printing.Append($"\"{current.Key_Viewer}\"").Append(':').Append($" \"{current.Value_Viewer}\"");
@@ -97,6 +104,7 @@ namespace Gason
             else
             {
                 if (current.m_JsonNode.Tag == JsonTag.JSON_ARRAY) printing.Append(indent > 0 ? "[\n" : "[");
+                else if (current.m_JsonNode.Tag == JsonTag.JSON_OBJECT) printing.Append(indent > 0 ? "{\n" : "{");
                 else
                 {
                     if (current.m_JsonNode.Tag == JsonTag.JSON_STRING) printing.Append($"\"{current.Value_Viewer}\"");

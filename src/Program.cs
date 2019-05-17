@@ -9,38 +9,89 @@ public class Program
     {
         Tests.TestAll();
 
-        String json;
         int endPos = -1;
         JsonNode jsn;
         Byte[] raw;
         Parser jsonParser = new Parser(true); // FloatAsDecimal
 
-        json = @"{
-                 ""id"": ""0001"", 
-                 ""type"": ""donut"", 
-                 ""name"": ""Cake"", 
-                 ""ppu"": 0.55, 
-                 ""batters"": [ 
-                     {  
-                       ""id"": ""1001"", 
-                       ""type"": ""Regular"" 
-                     }, 
-                     {  
-                       ""id"": ""1002"", 
-                       ""type"": ""Chocolate"" 
-                     }, 
-                     {  
-                       ""id"": ""1003"", 
-                       ""type"": ""Blueberry"" 
-                     }, 
-                     {  
-                       ""id"": ""1004"", 
-                       ""type"": ""Devil's Food"" 
-                     } 
-                 ] 
-               }";
+        String[] jsons =
+@"{
+  'id': '0001',
+  'type': 'donut',
+  'name': 'Cake',
+  'ppu': 0.55,
+  'batters': [
+    {
+      'id': '1001',
+      'type': 'Regular'
+    },
+    {
+      'id': '1002',
+      'type': 'Chocolate'
+    },
+    {
+      'id': '1003',
+      'type': 'Blueberry'
+    },
+    {
+      'id': '1004',
+      'type': 'Bad Food'
+    }
+  ]
+}|{
+  'batters': [
+    {
+      'id': '1002',
+      'type': 'Chocolate'
+    },
+    {
+      'id': '1003',
+      'type': 'Blueberry'
+    },
+    {
+      'id': '1004',
+      'type': 'Bad Food'
+    }
+  ],
+  'id': '0001',
+  'type': 'donut',
+  'name': 'Cake',
+  'ppu': 0.55
+}|{
+  'id': '0001',
+  'type': 'donut',
+  'name': 'Cake',
+  'ppu': 0.55
+  'batters': [
+    {
+      'id': '1001',
+      'type': 'Regular'
+    },
+    {
+      'id': '1003',
+      'type': 'Blueberry'
+    },
+    {
+      'id': '1004',
+      'type': 'Bad Food'
+    }
+  ]
+}".Replace("'", "\"").Split('|');
+        raw = Encoding.UTF8.GetBytes(jsons[1]);
+        jsonParser.Parse(raw, ref endPos, out JsonNode jsn1);
+        BrowseNode v1 = new BrowseNode(ref jsn1, raw);
 
-        raw = Encoding.UTF8.GetBytes(json);
+        raw = Encoding.UTF8.GetBytes(jsons[2]);
+        jsonParser.Parse(raw, ref endPos, out JsonNode jsn2);
+        BrowseNode v2 = new BrowseNode(ref jsn2, raw);
+
+        jsonParser.RemoveDuplicates(ref v1, ref v2);
+
+        Printer prn = new Printer();
+        Console.WriteLine(prn.Print(ref v1, 2).ToString());
+        Console.WriteLine(prn.Print(ref v2, 2).ToString());
+
+        raw = Encoding.UTF8.GetBytes(jsons[0]);
         ByteString[] keys = new ByteString[]
         {
             new ByteString("batters"),
@@ -70,22 +121,10 @@ public class Program
             sw.AutoFlush = true;
             wr.DumpValueIterative(sw, jsn, raw);
         }
-        BrowseNode v1 = new BrowseNode(ref jsn, raw);
 
         raw = File.ReadAllBytes(@"citylots.json");
         Benchmark b = new Benchmark(raw);
         b.Run(); // < 30s
-
-        BreadthFirst bf = new BreadthFirst(v1);
-        bf.Current = bf.Root;
-        BrowseNode traversal = bf.Root, prev;
-        do
-        {
-            Console.WriteLine(traversal.DebugView1());
-            prev = traversal;
-            traversal = bf.Next();
-        } while (traversal != null);
-
         return;
     }
 }

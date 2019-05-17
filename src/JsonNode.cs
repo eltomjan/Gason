@@ -9,6 +9,7 @@ namespace Gason
     { // 16B
         public JsonNode next; // 4B
         protected P_ByteLnk keyIdxes;
+        public P_ByteLnk KeyIndexesData { get { return keyIdxes; } }
 
         public P_ByteLnk doubleOrString;
         public JsonNode node;
