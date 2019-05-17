@@ -86,7 +86,14 @@ namespace Gason
                     second.Current = ndNode; // switch 2 same node
                     return true;
                 }
-                while (Level > second.Level) if (second.Level < 0) second.Current = second.Root; else second.Next(); // adjust levels
+                while (Level > second.Level) {
+                    if (second.Level < 0)
+                    {
+                        second.Current = second.Root;
+                        if (second.Current.m_JsonNode.node == null) return false;
+                    }
+                    else second.Next(); // adjust levels
+                }
                 if (Level != second.Level) return false;
             }
         }

@@ -436,6 +436,7 @@ namespace Gason
                     {
                         traversal = bf1.RemoveCurrent();
                         bf2.RemoveCurrent();
+                        if (traversal == null) break;
                     }
                     else removed = false;
                 } while (removed);

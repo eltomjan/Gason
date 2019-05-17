@@ -144,20 +144,24 @@ namespace Gason
             //Console.WriteLine($"Arround {arround}");
             //if (parent == pred && me != null && arround > 0) ;
 
-            BrowseNode retVal = null;
+            BrowseNode retVal = null, retVal2;
             switch (arround)
             { // 0, 1, 4 non-sense (complete Orphan), 2, 6 bug (Parent should be coppied), 8-11 impossible, 12 bug - cut from parents, 14 - bug lost parent copy
+                case 1: // recursion from 5
+                    return Parent_Viewer;
                 case 3: // a -> me                      | Parent / Pred, -, -
                     Pred_Viewer.m_JsonNode.next.node = null; // clear skipped node
                     Pred_Viewer.m_JsonNode.next = Pred_Viewer.m_JsonNode.next?.next;
                     return Pred_Viewer; // next @pred (last node in a row)
                 case 5: // Orphan, nested obj or array  | Parent / -, m_JsonNode, -
                     retVal = Parent_Viewer;
-                    if (retVal.m_JsonNode.node == m_JsonNode) retVal.m_JsonNode.node = retVal.m_JsonNode.next;
+                    retVal2 = retVal.RemoveCurrent(); // remove parent 2
+                    if (retVal?.m_JsonNode?.node == m_JsonNode) retVal.m_JsonNode.node = retVal.m_JsonNode.next;
                     m_JsonNode.next = null; // clear me -> a
-                    retVal.m_JsonNode.next = null; // clear parent next coppied
-                    retVal.m_JsonNode = null; // clear me
-                    return retVal.RemoveCurrent(); // remove parent 2
+                    if(retVal?.m_JsonNode?.next != null) retVal.m_JsonNode.next = null; // clear parent next coppied
+                    retVal = retVal.Parent_Viewer;
+                    if (retVal2 == null) return retVal;
+                    return retVal2;
                 case 7: // <-> a -> me => <-> a -> null | Parent / Pred, m_JsonNode, -
                     Pred_Viewer.m_JsonNode.next = m_JsonNode.next; // Link Pred -> Next(=null)
                     if (m_JsonNode.next == null) // (useless) re-check
