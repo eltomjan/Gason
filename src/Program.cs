@@ -78,11 +78,19 @@ public class Program
   ]
 }".Replace("'", "\"").Split('|');
         raw = Encoding.UTF8.GetBytes(jsons[1]);
-        jsonParser.Parse(raw, ref endPos, out JsonNode jsn1);
+        jsonParser.Parse(raw, ref endPos, out JsonNode jsn1
+#if KEY_SPLIT
+            , new ByteString[] { }, 0, 0, 0
+#endif
+        );
         BrowseNode v1 = new BrowseNode(ref jsn1, raw);
 
         raw = Encoding.UTF8.GetBytes(jsons[2]);
-        jsonParser.Parse(raw, ref endPos, out JsonNode jsn2);
+        jsonParser.Parse(raw, ref endPos, out JsonNode jsn2
+#if KEY_SPLIT
+            , new ByteString[] { }, 0, 0, 0
+#endif
+        );
         BrowseNode v2 = new BrowseNode(ref jsn2, raw);
 
         jsonParser.RemoveDuplicates(ref v1, ref v2);

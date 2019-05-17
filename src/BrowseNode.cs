@@ -146,36 +146,38 @@ namespace Gason
 
             BrowseNode retVal = null;
             switch (arround)
-            {
-                case 3: // a -> me
+            { // 0, 1, 4 non-sense (complete Orphan), 2, 6 bug (Parent should be coppied), 8-11 impossible, 12 bug - cut from parents, 14 - bug lost parent copy
+                case 3: // a -> me                      | Parent / Pred, -, -
                     Pred_Viewer.m_JsonNode.next.node = null; // clear skipped node
                     Pred_Viewer.m_JsonNode.next = Pred_Viewer.m_JsonNode.next?.next;
-                    return Parent_Viewer;
-                case 5: // only parent & me
+                    return Pred_Viewer; // next @pred (last node in a row)
+                case 5: // Orphan, nested obj or array  | Parent / -, m_JsonNode, -
                     retVal = Parent_Viewer;
                     if (retVal.m_JsonNode.node == m_JsonNode) retVal.m_JsonNode.node = retVal.m_JsonNode.next;
                     m_JsonNode.next = null; // clear me -> a
+                    retVal.m_JsonNode.next = null; // clear parent next coppied
                     retVal.m_JsonNode = null; // clear me
-                    return retVal.RemoveCurrent();
-                case 7: // <-> a -> me => <-> a -> null
-                    Pred_Viewer.m_JsonNode.next = m_JsonNode.next;
-                    if (m_JsonNode.next == null)
+                    return retVal.RemoveCurrent(); // remove parent 2
+                case 7: // <-> a -> me => <-> a -> null | Parent / Pred, m_JsonNode, -
+                    Pred_Viewer.m_JsonNode.next = m_JsonNode.next; // Link Pred -> Next(=null)
+                    if (m_JsonNode.next == null) // (useless) re-check
                     {
-                        m_JsonNode = null;
-                        return Pred_Viewer;
+                        m_JsonNode = null; // clear me
+                        return Pred_Viewer; // return 1 back
                     }
                     break; // unreachable
-                case 13: // me -> a
+                case 13: // me -> a                     | Parent / - , Node, Next
+                    retVal = Next_Viewer;
                     Parent_Viewer.m_JsonNode.node = m_JsonNode.next;
-                    //m_JsonNode.next = null; // clear me -> a
-                    //m_JsonNode = null; // clear me
-                    return Next_Viewer;
-                case 15: // a -> me -> b => a -> b
-                    Pred_Viewer.m_JsonNode.next = m_JsonNode.next; // skip me
-                    retVal = Pred_Viewer.Next_Viewer;
+                    m_JsonNode.next = null; // clear me -> a
+                    m_JsonNode = null; // clear me
+                    return retVal; // next @next
+                case 15: // a -> me -> b => a -> b      | Parent, Pred, Node, Next
+                    Pred_Viewer.m_JsonNode.next = m_JsonNode.next; // skip me (Pred -> Next)
+                    retVal = Pred_Viewer.Next_Viewer; // new Next (2x)
                     m_JsonNode.next = null; // clear me -> b
                     m_JsonNode = null; // clear me
-                    return retVal;
+                    return retVal; // next @next
                 default:
                     Console.WriteLine("Buggy node ?!");
                     break;
