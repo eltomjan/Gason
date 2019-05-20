@@ -20,7 +20,7 @@ namespace Gason
             }
         }
         public Boolean Orphan { get {
-                return current.Node_Viewer == null;
+                return (current?.NodeRawData?.NodeBelow == null);
             }
         }
         public int Level { get; private set; }

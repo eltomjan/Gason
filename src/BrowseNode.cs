@@ -76,17 +76,32 @@ namespace Gason
             String retVal = "";
             if (Level_Viewer > 0) retVal = new String(' ', Level_Viewer * 2);
             if(HasKey) {
-                if (NodeRawData.Tag == JsonTag.JSON_ARRAY) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\":[\t\t<- {Path}";
+                if (NodeRawData.Tag == JsonTag.JSON_ARRAY) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": [\t\t<- {Path}";
                 else {
-                    if(NodeRawData.Tag == JsonTag.JSON_STRING) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\":\"{Value_Viewer}\"\t\t<- {Path}";
+                    if (NodeRawData.Tag == JsonTag.JSON_STRING) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": \"{Value_Viewer}\"\t\t<- {Path}";
                     else if (NodeRawData.Tag == JsonTag.JSON_NUMBER
-                          || NodeRawData.Tag == JsonTag.JSON_NUMBER_STR
-                          || NodeRawData.Tag > JsonTag.JSON_OBJECT) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\":{Value_Viewer}\t\t<- {Path}";
-                    else retVal = $"{Level_Viewer} {retVal}{Tag_Viewer}:\"{Key_Viewer}\":{Value_Viewer}\t\t<- {Path}";
+                          || NodeRawData.Tag == JsonTag.JSON_NUMBER_STR) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": {Value_Viewer}\t\t<- {Path}";
+                    else if (NodeRawData.Tag > JsonTag.JSON_OBJECT) {
+                        if (NodeRawData.Tag == JsonTag.JSON_FALSE) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": false\t\t<- {Path}";
+                        else if (NodeRawData.Tag == JsonTag.JSON_TRUE) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": true\t\t<- {Path}";
+                        else if (NodeRawData.Tag == JsonTag.JSON_NULL) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": null\t\t<- {Path}";
+                        else retVal = "Not implemented !";
+                    } else retVal = $"{Level_Viewer} {retVal}{Tag_Viewer}: \"{Key_Viewer}\": {Value_Viewer}\t\t<- {Path}";
                 }
             } else {
                 if (NodeRawData.Tag == JsonTag.JSON_ARRAY) retVal = $"{Level_Viewer} {retVal}[\t\t<- {Path}";
                 else if(NodeRawData.Tag == JsonTag.JSON_OBJECT) retVal = $"{Level_Viewer} {retVal}{{\t\t<- {Path}";
+                else {
+                    if (NodeRawData.Tag == JsonTag.JSON_STRING) retVal = $"{Level_Viewer} {retVal}\"{Value_Viewer}\"\t\t<- {Path}";
+                    else if (NodeRawData.Tag == JsonTag.JSON_NUMBER
+                          || NodeRawData.Tag == JsonTag.JSON_NUMBER_STR) retVal = $"{Level_Viewer} {retVal}{Value_Viewer}\t\t<- {Path}";
+                    else if (NodeRawData.Tag > JsonTag.JSON_OBJECT) {
+                        if (NodeRawData.Tag == JsonTag.JSON_FALSE) retVal = $"{Level_Viewer} {retVal}false\t\t<- {Path}";
+                        else if (NodeRawData.Tag == JsonTag.JSON_TRUE) retVal = $"{Level_Viewer} {retVal}true\t\t<- {Path}";
+                        else if (NodeRawData.Tag == JsonTag.JSON_NULL) retVal = $"{Level_Viewer} {retVal}null\t\t<- {Path}";
+                        else retVal = "Not implemented !";
+                    } else retVal = $"{Level_Viewer} {retVal}{Tag_Viewer}: {Value_Viewer}\t\t<- {Path}";
+                }
             }
             return retVal;
         }
@@ -162,17 +177,17 @@ namespace Gason
             switch (arround)
             { // 0, 1, 4 non-sense (complete Orphan), 2, 6 bug (Parent should be coppied), 8-11 impossible, 12 bug - cut from parents, 14 - bug lost parent copy
                 case 3: // a -> me                      | Parent / Pred, -, -
-                    Pred_Viewer.m_JsonNode.next.node = null; // clear skipped node
-                    Pred_Viewer.m_JsonNode.next = Pred_Viewer.m_JsonNode.next?.next;
-                    return Pred_Viewer; // next @pred (last node in a row)
-                case 5: // Orphan, nested obj or array  | Parent / -, m_JsonNode, -
+                    retVal = Pred_Viewer;
+                    retVal.SkipNext(); // Link Pred -> Next(=null)
+                    return retVal; // next @pred (last node in a row)
+                case 5: // Orphan, nested obj or array  | Parent / -, Node, -
                     retVal = Parent_Viewer;
                     if(retVal?.NodeRawData.NodeBelow == NodeRawData)
                     if (retVal.Tag_Viewer == JsonTag.JSON_ARRAY
                     || retVal.Tag_Viewer == JsonTag.JSON_OBJECT) {
                         retVal2 = retVal.RemoveEmpties(NodeRawData); // remove parent 2
                     }
-                    retVal = retVal?.Parent_Viewer;
+                    if(retVal?.Parent_Viewer.NodeRawData != null) retVal = retVal?.Parent_Viewer;
                     if (retVal2 == null || retVal2.NodeRawData == null) return retVal;
                     return retVal2;
                 case 7: // <-> a -> me => <-> a -> null | Parent / Pred, Node, -
@@ -216,7 +231,7 @@ namespace Gason
             //Console.WriteLine($"Arround {arround}");
             //if (parent == pred && me != null && arround > 0) ;
 
-            BrowseNode retVal = null, retVal2 = null, retVal3;
+            BrowseNode retVal = null, retVal2 = null, retVal3 = null;
             switch (arround)
             { // 0, 1, 4 non-sense (complete Orphan), 2, 6 bug (Parent should be coppied), 8-11 impossible, 12 bug - cut from parents, 14 - bug lost parent copy
                 case 3: // a -> me                      | Parent / Pred, -, -
@@ -239,14 +254,15 @@ namespace Gason
                     NodeRawData = null;
                     return Pred_Viewer;
                 case 13: // me -> a                     | Parent / - , Node, Next
+                    if (NodeRawData.NodeBelow != removed) return this;
                     retVal = Next_Viewer;
                     retVal2 = Parent_Viewer;
                     Parent_Viewer.NodeRawData.NodeBelow = NodeRawData.NextTo;
                     NodeRawData.NextTo = null; // clear me -> a
+                    if (retVal2.Parent_Viewer != null) retVal3 = retVal2.RemoveEmpties(NodeRawData);
                     NodeRawData = null; // clear me
-                    retVal3 = retVal2.RemoveEmpties(NodeRawData);
-                    if(retVal2 == retVal3) return retVal; // next @next
-                    return retVal3;
+                    if (retVal2 == retVal3) return retVal2; // next @next
+                    return (retVal3 == null) ? retVal2 : retVal3;
                 case 15: // a -> me -> b => a -> b      | Parent, Pred, Node, Next
                     Pred_Viewer.SkipNext();
                     retVal = Pred_Viewer.Next_Viewer; // new Next (2x)
