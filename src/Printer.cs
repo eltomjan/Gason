@@ -45,7 +45,7 @@ namespace Gason
                     Level++;
                     current = current.Node_Viewer;
                     PrintOpen();
-                    if (current.m_JsonNode.node == null) PrintClose();
+                    if (current.NodeRawData.NodeBelow == null) PrintClose();
                 }
                 else if (current.Next_Viewer != null) {
                     current = current.Next_Viewer;
@@ -56,7 +56,7 @@ namespace Gason
                         if (current.Next_Viewer != null) {
                             current = current.Next_Viewer;
                             PrintOpen();
-                            if (current.m_JsonNode.node == null) PrintClose();
+                            if (current.NodeRawData.NodeBelow == null) PrintClose();
                             break;
                         }
                         Level--;
@@ -89,38 +89,38 @@ namespace Gason
             if (current.Level_Viewer > 0 && indent > 0) printing.Append(new String(' ', current.Level_Viewer * indent));
             if (current.HasKey)
             {
-                if (current.m_JsonNode.Tag == JsonTag.JSON_ARRAY) printing.Append($"\"{current.Key_Viewer}\"").Append(':').Append(indent > 0 ? " [\n" : " [");
-                else if (current.m_JsonNode.Tag == JsonTag.JSON_OBJECT) printing.Append(indent > 0 ? "{\n" : "{");
+                if (current.NodeRawData.Tag == JsonTag.JSON_ARRAY) printing.Append($"\"{current.Key_Viewer}\"").Append(':').Append(indent > 0 ? " [\n" : " [");
+                else if (current.NodeRawData.Tag == JsonTag.JSON_OBJECT) printing.Append(indent > 0 ? "{\n" : "{");
                 else
                 {
-                    if (current.m_JsonNode.Tag == JsonTag.JSON_STRING) printing.Append($"\"{current.Key_Viewer}\"").Append(':').Append($" \"{current.Value_Viewer}\"");
-                    else if (current.m_JsonNode.Tag == JsonTag.JSON_NUMBER
-                          || current.m_JsonNode.Tag == JsonTag.JSON_NUMBER_STR
-                          || current.m_JsonNode.Tag > JsonTag.JSON_OBJECT) printing.Append($"\"{current.Key_Viewer}\": ").Append(current.Value_Viewer);
-                    if (current.m_JsonNode.next != null)
+                    if (current.NodeRawData.Tag == JsonTag.JSON_STRING) printing.Append($"\"{current.Key_Viewer}\"").Append(':').Append($" \"{current.Value_Viewer}\"");
+                    else if (current.NodeRawData.Tag == JsonTag.JSON_NUMBER
+                          || current.NodeRawData.Tag == JsonTag.JSON_NUMBER_STR
+                          || current.NodeRawData.Tag > JsonTag.JSON_OBJECT) printing.Append($"\"{current.Key_Viewer}\": ").Append(current.Value_Viewer);
+                    if (current.NodeRawData.NextTo != null)
                         if (indent > 0) printing.Append(",\n"); else printing.Append(',');
                 }
             }
             else
             {
-                if (current.m_JsonNode.Tag == JsonTag.JSON_ARRAY) printing.Append(indent > 0 ? "[\n" : "[");
-                else if (current.m_JsonNode.Tag == JsonTag.JSON_OBJECT) printing.Append(indent > 0 ? "{\n" : "{");
+                if (current.NodeRawData.Tag == JsonTag.JSON_ARRAY) printing.Append(indent > 0 ? "[\n" : "[");
+                else if (current.NodeRawData.Tag == JsonTag.JSON_OBJECT) printing.Append(indent > 0 ? "{\n" : "{");
                 else
                 {
-                    if (current.m_JsonNode.Tag == JsonTag.JSON_STRING) printing.Append($"\"{current.Value_Viewer}\"");
-                    else if (current.m_JsonNode.Tag == JsonTag.JSON_NUMBER
-                          || current.m_JsonNode.Tag == JsonTag.JSON_NUMBER_STR
-                          || current.m_JsonNode.Tag > JsonTag.JSON_OBJECT) printing.Append(current.Value_Viewer);
-                    if (current.m_JsonNode.next != null)
+                    if (current.NodeRawData.Tag == JsonTag.JSON_STRING) printing.Append($"\"{current.Value_Viewer}\"");
+                    else if (current.NodeRawData.Tag == JsonTag.JSON_NUMBER
+                          || current.NodeRawData.Tag == JsonTag.JSON_NUMBER_STR
+                          || current.NodeRawData.Tag > JsonTag.JSON_OBJECT) printing.Append(current.Value_Viewer);
+                    if (current.NodeRawData.NextTo != null)
                         if (indent > 0) printing.Append(",\n"); else printing.Append(',');
                 }
             }
         }
         protected void PrintClose()
         {
-            if (current.m_JsonNode.Tag == JsonTag.JSON_ARRAY) printing.Append(new String(' ', current.Level_Viewer * indent)).Append(']');
-            else if (current.m_JsonNode.Tag == JsonTag.JSON_OBJECT) printing.Append(new String(' ', current.Level_Viewer * indent)).Append('}');
-            if (current.m_JsonNode.next != null) if (indent > 0) printing.Append(",\n"); else printing.Append(',');
+            if (current.NodeRawData.Tag == JsonTag.JSON_ARRAY) printing.Append(new String(' ', current.Level_Viewer * indent)).Append(']');
+            else if (current.NodeRawData.Tag == JsonTag.JSON_OBJECT) printing.Append(new String(' ', current.Level_Viewer * indent)).Append('}');
+            if (current.NodeRawData.NextTo != null) if (indent > 0) printing.Append(",\n"); else printing.Append(',');
             else if (indent > 0) printing.Append('\n');
         }
     }

@@ -93,7 +93,7 @@ public class Program
         );
         BrowseNode v2 = new BrowseNode(ref jsn2, raw);
 
-        jsonParser.RemoveDuplicates(ref v1, ref v2);
+        jsonParser.RemoveTwins(ref v1, ref v2);
 
         Printer prn = new Printer();
         Console.WriteLine(prn.Print(ref v1, 2).ToString());

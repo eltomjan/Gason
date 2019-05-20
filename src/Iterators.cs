@@ -90,7 +90,7 @@ namespace Gason
                     if (second.Level < 0)
                     {
                         second.Current = second.Root;
-                        if (second.Current.m_JsonNode.node == null) return false;
+                        if (second.Current.NodeRawData.NodeBelow == null) return false;
                     }
                     else second.Next(); // adjust levels
                 }

@@ -7,12 +7,15 @@ namespace Gason
 {
     public class JsonNode
     { // 16B
-        public JsonNode next; // 4B
+        protected JsonNode next; // 4B
         protected P_ByteLnk keyIdxes;
         public P_ByteLnk KeyIndexesData { get { return keyIdxes; } }
 
         public P_ByteLnk doubleOrString;
-        public JsonNode node;
+        protected JsonNode node;
+
+        public ref JsonNode NextTo { get { return ref next; } }
+        public ref JsonNode NodeBelow { get { return ref node; } }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public JsonNode() {}
@@ -39,11 +42,11 @@ namespace Gason
         {
             if (orig == null)
             {
-                next = this;
+                NextTo = this;
                 return;
             }
-            next = orig.next;
-            orig.next = this;
+            NextTo = orig.NextTo;
+            orig.NextTo = this;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -53,11 +56,11 @@ namespace Gason
             key.length = -1;
             if (orig == null)
             {
-                next = this;
+                NextTo = this;
                 return;
             }
-            next = orig.next;
-            orig.next = this;
+            NextTo = orig.NextTo;
+            orig.NextTo = this;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -67,10 +70,11 @@ namespace Gason
             JsonNode head = tail;
             if (null != head)
             {
-                head = tail.next;
-                tail.next = null;
-                node = head;
-                doubleOrString = head.doubleOrString;
+                head = tail.NextTo;
+                tail.NextTo = null;
+                NodeBelow = head;
+                //doubleOrString = head.doubleOrString;
+                doubleOrString.data = 0;
             }
         }
         public JsonTag Tag = JsonTag.JSON_NULL;
@@ -228,7 +232,7 @@ namespace Gason
         }
         public JsonNode ToNode()
         {
-            return node;
+            return NodeBelow;
         }
     }
 }

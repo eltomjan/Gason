@@ -111,7 +111,7 @@ namespace Gason
 #endif
                         break;
                     case 3: // case '"':
-                        JsonErrno e = o.GetString(ref strPos, s);
+                        JsonErrno e = o.GetString(ref strPos, s); // new ByteString(s, o.doubleOrString).ToString()
                         if (e != JsonErrno.OK) return e;
 #if !SKIP_VALIDATION
                         if (0 == (SearchTables.specialTypes[s[strPos]] & 3)) // !isdelim
@@ -182,7 +182,7 @@ namespace Gason
                             return JsonErrno.UNEXPECTED_CHARACTER; // fail4
 #endif
 #if DEBUGGING
-                        o.ListToValue(JsonTag.JSON_ARRAY, tails[pos] != null ? tails[pos].m_JsonNode : null);
+                        o.ListToValue(JsonTag.JSON_ARRAY, tails[pos] != null ? tails[pos].NodeRawData : null);
                         pos--;
 #else
                         o.ListToValue(JsonTag.JSON_ARRAY, tails[pos--]);
@@ -203,7 +203,7 @@ namespace Gason
                             return JsonErrno.UNEXPECTED_CHARACTER;
 #endif
 #if DEBUGGING
-                        o.ListToValue(JsonTag.JSON_OBJECT, tails[pos] != null ? tails[pos].m_JsonNode : null);
+                        o.ListToValue(JsonTag.JSON_OBJECT, tails[pos] != null ? tails[pos].NodeRawData : null);
                         pos--;
 #else
                         o.ListToValue(JsonTag.JSON_OBJECT, tails[pos--]);
@@ -359,7 +359,7 @@ namespace Gason
 #endif
                     }
 #if DEBUGGING
-                    o.InsertAfter(tails[pos] != null ? tails[pos].m_JsonNode : null, ref keys[pos].idxes);
+                    o.InsertAfter(tails[pos] != null ? tails[pos].NodeRawData : null, ref keys[pos].idxes);
 #else
                     o.InsertAfter(tails[pos] != null ? tails[pos] : null, ref keys[pos]);
 #endif
@@ -367,7 +367,7 @@ namespace Gason
                     else
                     {
 #if DEBUGGING
-                        o.InsertAfter(tails[pos] != null ? tails[pos].m_JsonNode : null);
+                        o.InsertAfter(tails[pos] != null ? tails[pos].NodeRawData : null);
 #else
                         o.InsertAfter(tails[pos]);
 #endif
@@ -390,7 +390,7 @@ namespace Gason
                         || tags[pos] == JsonTag.JSON_OBJECT)
                         { // lists close brackets
 #if DEBUGGING
-                            o.ListToValue(tags[pos], tails[pos] != null ? tails[pos].m_JsonNode : null);
+                            o.ListToValue(tags[pos], tails[pos] != null ? tails[pos].NodeRawData : null);
 #else
                             o.ListToValue(tags[pos], tails[pos]);
 #endif
@@ -412,7 +412,7 @@ namespace Gason
             }
             return JsonErrno.BREAKING_BAD;
         }
-        public void RemoveDuplicates(ref BrowseNode v1, ref BrowseNode v2)
+        public void RemoveTwins(ref BrowseNode v1, ref BrowseNode v2)
         {
             BreadthFirst bf1 = new BreadthFirst(v1);
             BreadthFirst bf2 = new BreadthFirst(v2);
@@ -436,7 +436,13 @@ namespace Gason
                     {
                         traversal = bf1.RemoveCurrent();
                         bf2.RemoveCurrent();
-                        if (traversal == null) break;
+                        if (traversal == null || traversal.NodeRawData == null
+                        || bf1.Root.NodeRawData == null
+                        || bf2.Root.NodeRawData == null)
+                        {
+                            traversal = null;
+                            break;
+                        }
                     }
                     else removed = false;
                 } while (removed);
