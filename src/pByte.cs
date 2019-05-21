@@ -70,5 +70,13 @@ namespace Gason
             return CompareRaw(src, width.pos);
 
         }
+        public int Find(Char letter)
+        {
+            for (int i = 0; i < length; i++)
+            {
+                if (storage[i] == letter) return i;
+            }
+            return -1;
+        }
     }
 }

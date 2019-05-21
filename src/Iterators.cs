@@ -102,5 +102,33 @@ namespace Gason
             Current = current.RemoveCurrent(); // request remove and get next one
             return current;
         }
+        public Boolean FindNode(String name)
+        {
+            BrowseNode posBackup = current;
+            ByteString key = new ByteString(name);
+            while (current != null)
+            {
+                if (current.KeyEquals(key)) return true;
+                Next();
+            }
+            current = posBackup;
+            return false;
+        }
+        public Boolean NextNth(int n)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                if (current == null) return false;
+                current = current.Next_Viewer;
+            }
+            return (current != null);
+        }
+        public Boolean PrependChild(JsonNode child)
+        {
+            if (current?.NodeRawData?.NodeBelow == null) return false;
+            child.NextTo = current.NodeRawData.NodeBelow;
+            current.NodeRawData.NodeBelow = child;
+            return true;
+        }
     }
 }

@@ -9,7 +9,7 @@ public class Tests
     static int parsed;
     static int failed;
     static int m_start1;
-    static String ReadFile(String filename)
+    public static String ReadFile(String filename)
     {
         String[] paths = {
             "jsonchecker",

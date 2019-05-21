@@ -105,6 +105,14 @@ namespace Gason
             }
             return retVal;
         }
+        public Boolean KeyEquals(ByteString key)
+        {
+            return key.Equals(src, NodeRawData.KeyIndexesData);
+        }
+        public Boolean ValueEquals(ByteString val)
+        {
+            return val.Equals(src, NodeRawData.doubleOrString);
+        }
         public Boolean Equals(BrowseNode j2)
         {
             if (NodeRawData.Tag != j2.NodeRawData.Tag) return false;
@@ -152,7 +160,10 @@ namespace Gason
         }
         public void ReplaceNode(JsonNode newNode)
         {
+            JsonNode old = NodeRawData;
             NodeRawData = newNode;
+            if (old.NextTo != null) NodeRawData.NextTo = old.NextTo;
+            if (old.NodeBelow != null && old.NodeBelow == null) NodeRawData.NodeBelow = old.NodeBelow;
         }
         public void SkipNext()
         {
