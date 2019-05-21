@@ -11,7 +11,7 @@ namespace Gason
         JSON_OBJECT,
         JSON_TRUE,
         JSON_FALSE,
-        JSON_NULL = 0xF
+        JSON_NULL
     }
     public enum JsonErrno
     {

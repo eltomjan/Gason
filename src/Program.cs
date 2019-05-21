@@ -214,7 +214,7 @@ public class Program
   'statuses': [
     {
       'created_at': 'Sun Aug 31 00:28:56 +0000 2014',
-      {
+      'entities': {
         'hashtags': [
           {
             'Sun'
@@ -227,7 +227,7 @@ public class Program
 |{
   'statuses': [
     {
-      {
+      'entities': {
         'user_mentions': [
           {
             'indices': [
@@ -240,7 +240,7 @@ public class Program
     },
     {
       'created_at': 'Sun Aug 31 00:28:56 +0000 2014',
-      {
+      'entities': {
         'hashtags': [
           {
             'Aug'

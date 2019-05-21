@@ -25,9 +25,9 @@ namespace Gason
                 return Encoding.UTF8.GetString(src, keyIdxes.pos, keyIdxes.length);
             else return "Key index out of string !";
         }
-        public String KeyView(Byte[] src)
+        public String KeyView(Byte[] src, Boolean print = false)
         {
-            if (keyIdxes.length == 0) return $"Empty:{keyIdxes.pos},{keyIdxes.length}";
+            if (keyIdxes.length == 0) return print ? "" : $"Empty:{keyIdxes.pos},{keyIdxes.length}";
             else return Encoding.UTF8.GetString(src, keyIdxes.pos, keyIdxes.length);
         }
         public Boolean HasKey  { get { return (keyIdxes.pos != 0) || (keyIdxes.length != 0); } }

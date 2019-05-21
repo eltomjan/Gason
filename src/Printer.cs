@@ -45,14 +45,16 @@ namespace Gason
                     Level++;
                     current = current.Node_Viewer;
                     PrintOpen();
-                    if (current.NodeRawData.NodeBelow == null
+                    if (current.NodeRawData.NodeBelow == null && current.NodeRawData.NextTo == null
                     && (current.NodeRawData.Tag == JsonTag.JSON_ARRAY
-                     || current.NodeRawData.Tag == JsonTag.JSON_OBJECT
-                     || current.NodeRawData.NextTo != null)) PrintClose();
+                     || current.NodeRawData.Tag == JsonTag.JSON_OBJECT)) PrintClose();
                 }
                 else if (current.Next_Viewer != null) {
                     current = current.Next_Viewer;
                     PrintOpen();
+                    if (current.NodeRawData.NodeBelow == null
+                    && (current.NodeRawData.Tag == JsonTag.JSON_ARRAY
+                     || current.NodeRawData.Tag == JsonTag.JSON_OBJECT)) PrintClose();
                 } else {
                     while (current != null) {
                         PrintClose();
@@ -90,16 +92,16 @@ namespace Gason
         protected void PrintOpen()
         {
             if (current.Level_Viewer > 0 && indent > 0) printing.Append(new String(' ', current.Level_Viewer * indent));
-            String key;
-            if (current.HasKey) key = $"\"{current.Key_Viewer}\": "; else key = "";
+            String key = indent > 0 ? " " : "";
+            if (current.HasKey) key = $"\"{current.KeyPrint}\":{key}"; else key = "";
             if (current.NodeRawData.Tag == JsonTag.JSON_ARRAY) printing.Append(key).Append(indent > 0 ? "[\n" : "[");
-            else if (current.NodeRawData.Tag == JsonTag.JSON_OBJECT) printing.Append(indent > 0 ? "{\n" : "{");
+            else if (current.NodeRawData.Tag == JsonTag.JSON_OBJECT) printing.Append(key).Append(indent > 0 ? "{\n" : "{");
             else {
                 if (current.NodeRawData.Tag == JsonTag.JSON_STRING) printing.Append(key).Append($"\"{current.Value_Viewer}\"");
                 else if (current.NodeRawData.Tag == JsonTag.JSON_NUMBER
                         || current.NodeRawData.Tag == JsonTag.JSON_NUMBER_STR
                         || current.NodeRawData.Tag > JsonTag.JSON_OBJECT) printing.Append(key).Append(current.Value_Viewer);
-                if (current.NodeRawData.NextTo != null && current.NodeRawData.NextTo?.NextTo != null)
+                if (current.NodeRawData.NextTo != null)
                     if (indent > 0) printing.Append(",\n"); else printing.Append(',');
             }
         }

@@ -13,7 +13,16 @@ namespace Gason
         public JsonTag Tag_Viewer { get { return NodeRawData.Tag; } }
         public Boolean HasKey { get { if (null != NodeRawData) return NodeRawData.HasKey; else return false; } }
         public String Key_Viewer { get { return NodeRawData.KeyView(src); } }
-        public String Value_Viewer { get { return new ByteString(src, NodeRawData.doubleOrString).ToString(); } }
+        public String KeyPrint { get { return NodeRawData.KeyView(src, true); } }
+        private static String[] specialNames = "true,false,null".Split(',');
+        public String Value_Viewer {
+            get {
+                if (JsonTag.JSON_OBJECT < NodeRawData.Tag) {
+                    return specialNames[NodeRawData.Tag - JsonTag.JSON_TRUE];
+                }
+                return new ByteString(src, NodeRawData.doubleOrString).ToString();
+            }
+        }
         public BrowseNode(ref JsonNode my, Byte[] src)
         {
             Level_Viewer = 0;
