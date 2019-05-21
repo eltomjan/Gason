@@ -146,7 +146,7 @@ public class Program
         v2 = new BrowseNode(ref jsn02, raw);
         BreadthFirst bf1 = new BreadthFirst(v1);
         BreadthFirst bf2 = new BreadthFirst(v2);
-        JsonNode nNo2 = null, nNo3 = null;
+        JsonNode nNo2 = null, nNo3 = null, nId1 = null, nId2 = null;
         if (bf2.FindNode("created_at")) // Small TC-like demo
         {
             P_ByteLnk index = bf2.Current.NodeRawData.doubleOrString, tmp;
@@ -165,7 +165,30 @@ public class Program
                 Tag = JsonTag.JSON_STRING,
                 doubleOrString = tmp
             };
+            tmp.pos = index.pos;
+            tmp.length = 3; // Sun
+            nId1 = new JsonNode
+            {
+                Tag = JsonTag.JSON_STRING,
+                doubleOrString = tmp
+            };
+            tmp.pos += 4; // Aug
+            nId2 = new JsonNode
+            {
+                Tag = JsonTag.JSON_STRING,
+                doubleOrString = tmp
+            };
         }
+        if (bf1.FindNode("metadata")
+        && bf1.Parent()
+        && bf1.NextNth(99)
+        && bf1.FindNode("user")
+        && bf1.FindNode("hashtags"))
+        {
+            bf1.Next();
+            bf1.PrependChild(nId1);
+        }
+        bf1.Current = bf1.Root;
         if (bf2.FindNode("metadata")
         && bf2.Parent()
         && bf2.NextNth(37)
@@ -176,9 +199,32 @@ public class Program
             bf2.PrependChild(nNo3);
             bf2.PrependChild(nNo2);
         }
+        if (bf2.FindNode("metadata")
+        && bf2.Parent()
+        && bf2.NextNth(60)
+        && bf2.FindNode("user")
+        && bf2.FindNode("hashtags"))
+        {
+            bf2.Next();
+            bf2.PrependChild(nId2);
+        }
         jsonParser.RemoveTwins(ref v1, ref v2);
-        String result2 =
+        String[] results =
 @"{
+  'statuses': [
+    {
+      'created_at': 'Sun Aug 31 00:28:56 +0000 2014',
+      {
+        'hashtags': [
+          {
+            'Sun'
+          }
+        ]
+      }
+    }
+  ]
+}
+|{
   'statuses': [
     {
       {
@@ -186,22 +232,30 @@ public class Program
           {
             'indices': [
               '2',
-,
               '3'
             ]
+          }
+        ]
+      }
+    },
+    {
+      'created_at': 'Sun Aug 31 00:28:56 +0000 2014',
+      {
+        'hashtags': [
+          {
+            'Aug'
           }
         ]
       }
     }
   ]
 }
-".Replace("'", "\"").Replace("\r\n", "\n");
-        if (v1.NodeRawData != null) Console.WriteLine("Bug - 1st JSON not empty");
-        else Console.WriteLine("Twitter check 1/2 OK - 1st file empty");
+".Replace("'","\"").Replace("\r\n","\n").Split('|');
+        if (v1.NodeRawData == null) Console.WriteLine("Bug - 1st JSON empty");
+        else if (results[0] == prn.Print(ref v1, 2).ToString()) Console.WriteLine($"Twitter check 1/2 OK - 2nd file has expected content:\n{results[0]}");
         if (v2.NodeRawData == null) Console.WriteLine("Bug - 2nd JSON empty");
-        else if (result2 == prn.Print(ref v2, 2).ToString()) Console.WriteLine($"Twitter check 2/2 OK - 2nd file has expected content:\n{result2}");
+        else if (results[1] == prn.Print(ref v2, 2).ToString()) Console.WriteLine($"Twitter check 2/2 OK - 2nd file has expected content:\n{results[1]}");
         else Console.WriteLine("Bug demo print result differs.");
-
 
         raw = File.ReadAllBytes(@"citylots.json");
         Benchmark b = new Benchmark(raw);

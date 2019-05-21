@@ -45,7 +45,10 @@ namespace Gason
                     Level++;
                     current = current.Node_Viewer;
                     PrintOpen();
-                    if (current.NodeRawData.NodeBelow == null) PrintClose();
+                    if (current.NodeRawData.NodeBelow == null
+                    && (current.NodeRawData.Tag == JsonTag.JSON_ARRAY
+                     || current.NodeRawData.Tag == JsonTag.JSON_OBJECT
+                     || current.NodeRawData.NextTo != null)) PrintClose();
                 }
                 else if (current.Next_Viewer != null) {
                     current = current.Next_Viewer;
@@ -97,7 +100,7 @@ namespace Gason
                     else if (current.NodeRawData.Tag == JsonTag.JSON_NUMBER
                           || current.NodeRawData.Tag == JsonTag.JSON_NUMBER_STR
                           || current.NodeRawData.Tag > JsonTag.JSON_OBJECT) printing.Append($"\"{current.Key_Viewer}\": ").Append(current.Value_Viewer);
-                    if (current.NodeRawData.NextTo != null)
+                    if (current.NodeRawData.NextTo != null && current.NodeRawData.NextTo?.NextTo != null)
                         if (indent > 0) printing.Append(",\n"); else printing.Append(',');
                 }
             }
@@ -111,7 +114,7 @@ namespace Gason
                     else if (current.NodeRawData.Tag == JsonTag.JSON_NUMBER
                           || current.NodeRawData.Tag == JsonTag.JSON_NUMBER_STR
                           || current.NodeRawData.Tag > JsonTag.JSON_OBJECT) printing.Append(current.Value_Viewer);
-                    if (current.NodeRawData.NextTo != null)
+                    if (current.NodeRawData.NextTo != null && current.NodeRawData.NextTo?.NextTo != null)
                         if (indent > 0) printing.Append(",\n"); else printing.Append(',');
                 }
             }
