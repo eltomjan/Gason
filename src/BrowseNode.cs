@@ -14,7 +14,7 @@ namespace Gason
         public Boolean HasKey { get { if (null != NodeRawData) return NodeRawData.HasKey; else return false; } }
         public String Key_Viewer { get { return NodeRawData.KeyView(src); } }
         public String KeyPrint { get { return NodeRawData.KeyView(src, true); } }
-        private static String[] specialNames = "true,false,null".Split(',');
+        private static readonly String[] specialNames = "true,false,null".Split(',');
         public String Value_Viewer {
             get {
                 if (JsonTag.JSON_OBJECT < NodeRawData.Tag) {
@@ -282,7 +282,7 @@ namespace Gason
                     NodeRawData.NextTo = null; // clear me -> a
                     NodeRawData = null; // clear me
                     if (retVal2 == retVal3) return retVal2; // next @next
-                    return (retVal3 == null) ? retVal2 : retVal3;
+                    return retVal3 ?? retVal2;
                 case 15: // a -> me -> b => a -> b      | Parent, Pred, Node, Next
                     Pred_Viewer.SkipNext();
                     retVal = Pred_Viewer.Next_Viewer; // new Next (2x)

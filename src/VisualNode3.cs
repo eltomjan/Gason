@@ -7,9 +7,13 @@ namespace Gason
     {
         public JsonNode NodeRawData;
         readonly Byte[] src;
+#pragma warning disable IDE0044 // Add readonly modifier
         int m_Shift_Width = 2;
+#pragma warning restore IDE0044 // Add readonly modifier
+#pragma warning disable IDE1006 // Naming Styles
         public int m_Indent { get; set; } = 0;
         public int m_debugModeLimit { get; set; }
+#pragma warning restore IDE1006 // Naming Styles
         Stack<JsonNode> levelStack = new Stack<JsonNode>();
         public VisualNode3(ref JsonNode my, Byte[] src, int debugModeLimit)
         {

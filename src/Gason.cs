@@ -182,7 +182,7 @@ namespace Gason
                             return JsonErrno.UNEXPECTED_CHARACTER; // fail4
 #endif
 #if DEBUGGING
-                        o.ListToValue(JsonTag.JSON_ARRAY, tails[pos] != null ? tails[pos].NodeRawData : null);
+                        o.ListToValue(JsonTag.JSON_ARRAY, tails[pos]?.NodeRawData);
                         pos--;
 #else
                         o.ListToValue(JsonTag.JSON_ARRAY, tails[pos--]);
@@ -203,7 +203,7 @@ namespace Gason
                             return JsonErrno.UNEXPECTED_CHARACTER;
 #endif
 #if DEBUGGING
-                        o.ListToValue(JsonTag.JSON_OBJECT, tails[pos] != null ? tails[pos].NodeRawData : null);
+                        o.ListToValue(JsonTag.JSON_OBJECT, tails[pos]?.NodeRawData);
                         pos--;
 #else
                         o.ListToValue(JsonTag.JSON_OBJECT, tails[pos--]);
@@ -359,7 +359,7 @@ namespace Gason
 #endif
                     }
 #if DEBUGGING
-                    o.InsertAfter(tails[pos] != null ? tails[pos].NodeRawData : null, ref keys[pos].idxes);
+                    o.InsertAfter(tails[pos]?.NodeRawData, ref keys[pos].idxes);
 #else
                     o.InsertAfter(tails[pos] != null ? tails[pos] : null, ref keys[pos]);
 #endif
@@ -367,7 +367,7 @@ namespace Gason
                     else
                     {
 #if DEBUGGING
-                        o.InsertAfter(tails[pos] != null ? tails[pos].NodeRawData : null);
+                        o.InsertAfter(tails[pos]?.NodeRawData);
 #else
                         o.InsertAfter(tails[pos]);
 #endif
@@ -390,7 +390,7 @@ namespace Gason
                         || tags[pos] == JsonTag.JSON_OBJECT)
                         { // lists close brackets
 #if DEBUGGING
-                            o.ListToValue(tags[pos], tails[pos] != null ? tails[pos].NodeRawData : null);
+                            o.ListToValue(tags[pos], tails[pos]?.NodeRawData);
 #else
                             o.ListToValue(tags[pos], tails[pos]);
 #endif
