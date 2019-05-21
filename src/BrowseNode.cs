@@ -245,6 +245,7 @@ namespace Gason
                     if (NodeRawData.NodeBelow != removed) return this;
                     retVal = Parent_Viewer;
                     retVal2 = retVal.RemoveEmpties(NodeRawData); // remove parent 2
+                    NodeRawData = null; // clear me
                     if (retVal2 != null) return retVal2;
                     if (retVal?.Parent_Viewer != null) return retVal?.Parent_Viewer;
                     return retVal;
@@ -259,7 +260,6 @@ namespace Gason
                     retVal2 = Parent_Viewer;
                     Parent_Viewer.NodeRawData.NodeBelow = NodeRawData.NextTo;
                     NodeRawData.NextTo = null; // clear me -> a
-                    if (retVal2.Parent_Viewer != null) retVal3 = retVal2.RemoveEmpties(NodeRawData);
                     NodeRawData = null; // clear me
                     if (retVal2 == retVal3) return retVal2; // next @next
                     return (retVal3 == null) ? retVal2 : retVal3;
