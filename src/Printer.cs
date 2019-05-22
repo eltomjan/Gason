@@ -33,13 +33,13 @@ namespace Gason
             BrowseNode root = new BrowseNode(ref start, src);
             return Print(ref root, indent);
         }
-        public StringBuilder Print(ref BrowseNode currentNode, int indent)
+        public StringBuilder Print(ref BrowseNode current, int _indent)
         {
-            current = currentNode;
+            BrowseNode currentNode = current;
             printing = new StringBuilder();
-            this.indent = indent;
+            indent = _indent;
             Stack<BrowseNode> levelStack = new Stack<BrowseNode>();
-            shift_Width = 0;
+            shift_Width = 2;
 
             BrowseNode startNode = current;
             String space, newLine;

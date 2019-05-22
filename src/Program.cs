@@ -22,10 +22,6 @@ public class Program
   'ppu': 0.55,
   'batters': [
     {
-      'id': '1001',
-      'type': 'Regular'
-    },
-    {
       'id': '1002',
       'type': 'Chocolate'
     },
@@ -36,6 +32,10 @@ public class Program
     {
       'id': '1004',
       'type': 'Bad Food'
+    },
+    {
+      'id': '1001',
+      'type': 'Regular'
     }
   ]
 }|{
@@ -96,8 +96,8 @@ public class Program
         jsonParser.RemoveTwins(ref v1, ref v2);
 
         Printer prn = new Printer();
-        Console.WriteLine(prn.Print(ref v1, 2).ToString());
-        Console.WriteLine(prn.Print(ref v2, 2).ToString());
+        Console.WriteLine(prn.Print(ref v1, 0).ToString());
+        Console.WriteLine(prn.Print(ref v2, 0).ToString());
 
         raw = Encoding.UTF8.GetBytes(jsons[0]);
         ByteString[] keys = new ByteString[]
@@ -252,9 +252,9 @@ public class Program
 }
 ".Replace("'","\"").Replace("\r\n","\n").Split('|');
         if (v1.NodeRawData == null) Console.WriteLine("Bug - 1st JSON empty");
-        else if (results[0] == prn.Print(ref v1, 2).ToString()) Console.WriteLine($"Twitter check 1/2 OK - 2nd file has expected content:\n{results[0]}");
+        else if (results[0] == prn.Print(ref v1, 0).ToString()) Console.WriteLine($"Twitter check 1/2 OK - 2nd file has expected content:\n{results[0]}");
         if (v2.NodeRawData == null) Console.WriteLine("Bug - 2nd JSON empty");
-        else if (results[1] == prn.Print(ref v2, 2).ToString()) Console.WriteLine($"Twitter check 2/2 OK - 2nd file has expected content:\n{results[1]}");
+        else if (results[1] == prn.Print(ref v2, 0).ToString()) Console.WriteLine($"Twitter check 2/2 OK - 2nd file has expected content:\n{results[1]}");
         else Console.WriteLine("Bug demo print result differs.");
 
         raw = File.ReadAllBytes(@"citylots.json");

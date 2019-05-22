@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace Gason
 {
@@ -419,6 +421,7 @@ namespace Gason
             BrowseNode traversal = bf1.Root;
             bf2.NextAs(bf1);
             Boolean removed = true;
+            //int removeNo = 0;
             do
             {
                 if (!removed)
@@ -434,6 +437,7 @@ namespace Gason
                     removed = bf1.NextAs(bf2);
                     if (removed && bf1.Orphan && bf2.Orphan)
                     {
+                        //removeNo++;
                         traversal = bf1.RemoveCurrent();
                         bf2.RemoveCurrent();
                         if (traversal == null || traversal.NodeRawData == null
@@ -448,6 +452,117 @@ namespace Gason
                 } while (removed);
                 if (!removed) traversal = bf1.Next();
             } while (traversal != null);
+        }
+        public class NodeComparer : IComparable<NodeComparer>
+        {
+            public BrowseNode element;
+            public String Key { get { return element.KeyPrint; } }
+            public String Value { get { return element.Value_Viewer; } }
+            Byte[] src;
+            public NodeComparer(BrowseNode el, Byte[] s) {
+                element = el;
+                src = s;
+            }
+            public int CompareTo(NodeComparer other)
+            {
+                if ((element.NodeRawData.KeyIndexesData.data == other.element.NodeRawData.KeyIndexesData.data)
+                 && (element.NodeRawData.doubleOrString.data == other.element.NodeRawData.doubleOrString.data))
+                    return 0;
+                if ((String.Compare(Key, other.Key) < 0)
+                 || (element.NodeRawData.KeyIndexesData.data == other.element.NodeRawData.KeyIndexesData.data
+                      && (String.Compare(Value, other.Value) < 0)))
+                {
+                    return -1;
+                }
+
+                return 1;
+            }
+        }
+        public class NodeComparer2 //: IComparable<NodeComparer2>
+        {
+            public String Key { get; set; }
+            public List<NodeComparer> element;
+            public override string ToString()
+            {
+                return Key;
+            }
+        }
+        internal void AddPaths(JsonNode root, Byte[] JSONdata, String id)
+        {
+            Printer p = new Printer();
+
+            Stack<BrowseNode> s = new Stack<BrowseNode>();
+            s.Push(new BrowseNode(ref root, JSONdata));
+            List<NodeComparer2> rows = new List<NodeComparer2>();
+            HashSet<JsonNode> processed = new HashSet<JsonNode>();
+            BrowseNode element;
+            while (s.Count > 0)
+            {
+                element = s.Pop();
+                if (null != element.NodeRawData.NodeBelow)
+                {
+                    if (null != element.NodeRawData.NextTo) s.Push(element.Next_Viewer);
+                    s.Push(element.Node_Viewer);
+                }
+                else if (null != element.NodeRawData.NextTo)
+                {
+                    if (processed.Contains(element.NodeRawData)) continue;
+                    else processed.Add(element.NodeRawData);
+                    BrowseNode keyNode = element;
+                    ParentNode pn = new ParentNode(element);
+                    List<NodeComparer> lastChildrens = new List<NodeComparer>();
+                    JsonNode following = null;
+                    String key = "";
+                    while (null != keyNode)
+                    {
+                        if (JsonTag.JSON_ARRAY == keyNode.Tag_Viewer || JsonTag.JSON_OBJECT == keyNode.Tag_Viewer) s.Push(keyNode);
+                        if (id != null && id == keyNode.KeyPrint) {
+                            key = $"\\{keyNode.Value_Viewer}";
+                        } else {
+                            lastChildrens.Add(new NodeComparer(keyNode, JSONdata));
+                        }
+                        following = keyNode.NodeRawData;
+                        keyNode = keyNode.Next_Viewer;
+                    }
+                    lastChildrens.Sort();
+                    pn.SetChild(lastChildrens[0].element);
+                    int count = lastChildrens.Count;
+                    lastChildrens[count - 1].element.NodeRawData.SetNextTo(null);
+                    for (int i = 1; i < count; i++)
+                    {
+                        lastChildrens[i - 1].element.NodeRawData.NextTo = lastChildrens[i].element.NodeRawData;
+                    }
+                    for (int i = 0; i < lastChildrens.Count; i++)
+                    {
+                        if (lastChildrens[i].element.Tag_Viewer == JsonTag.JSON_ARRAY
+                        || lastChildrens[i].element.Tag_Viewer == JsonTag.JSON_OBJECT) lastChildrens.Remove(lastChildrens[i--]);
+                    }
+                    key = (element.Parent_Viewer ?? element).Path(true) + key;
+                    foreach (var item in lastChildrens)
+                    {
+                        key += $"\t{item.element.KeyPrint}\t'{item.element.Value_Viewer}";
+                    }
+                    rows.Add(new NodeComparer2() { Key = key, element = lastChildrens });
+                }
+            }
+            String pp = p.Print(ref root, JSONdata, 0).ToString();
+        }
+        public class ParentNode
+        {
+            readonly BrowseNode parentNode;
+            readonly Boolean first;
+            public BrowseNode Parent { get { return parentNode; } }
+            public ParentNode(BrowseNode me)
+            {
+                first = me.Parent_Viewer.NodeRawData.NodeBelow == me.NodeRawData;
+                if (first) parentNode = me.Parent_Viewer;
+                else parentNode = me.Pred_Viewer;
+            }
+            public void SetChild(BrowseNode me)
+            {
+                if (first) parentNode.NodeRawData.NodeBelow = me.NodeRawData;
+                else parentNode.NodeRawData.NextTo = me.NodeRawData;
+            }
         }
     }
 }

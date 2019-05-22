@@ -56,60 +56,60 @@ namespace Gason
                 } else return null;
             }
         }
-        public String Path
+        public String Path(Boolean sortable = false)
         {
-            get {
-                BrowseNode end = this;
-                if (end == null) return "";
-                Stack<String> elements = new Stack<string>();
-                while(end != null) {
-                    if(end.HasKey) elements.Push($"{end.Key_Viewer}");
-                    else {
-                        if (end.Pred_Viewer == null && end.Next_Viewer == null) {
-                            if (end.Tag_Viewer == JsonTag.JSON_ARRAY) elements.Push("[]");
-                            else if(end.Tag_Viewer == JsonTag.JSON_OBJECT) elements.Push("{}");
-                        } else if(end.Tag_Viewer == JsonTag.JSON_ARRAY
-                             || end.Tag_Viewer == JsonTag.JSON_OBJECT) {
-                            int pos = 0;
-                            while(end.Pred_Viewer != null) { pos++; end = end.Pred_Viewer; }
+            BrowseNode end = this;
+            if (end == null) return "";
+            Stack<String> elements = new Stack<string>();
+            while(end != null) {
+                if(end.HasKey) elements.Push($"{end.Key_Viewer}");
+                else {
+                    if (end.Pred_Viewer == null && end.Next_Viewer == null) {
+                        if (end.Tag_Viewer == JsonTag.JSON_ARRAY) elements.Push("[]");
+                        else if(end.Tag_Viewer == JsonTag.JSON_OBJECT) elements.Push("{}");
+                    } else if(end.Tag_Viewer == JsonTag.JSON_ARRAY
+                            || end.Tag_Viewer == JsonTag.JSON_OBJECT) {
+                        int pos = 0;
+                        if (sortable) elements.Push($"[]"); else {
+                            while (end.Pred_Viewer != null) { pos++; end = end.Pred_Viewer; }
                             elements.Push($"[{pos}]");
                         }
                     }
-                    end = end.Parent_Viewer;
                 }
-                return String.Join(".", elements);
+                end = end.Parent_Viewer;
             }
+            return String.Join(".", elements);
         }
         public String DebugView1()
         {
             String retVal = "";
             if (Level_Viewer > 0) retVal = new String(' ', Level_Viewer * 2);
             if(HasKey) {
-                if (NodeRawData.Tag == JsonTag.JSON_ARRAY) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": [\t\t<- {Path}";
+                if (NodeRawData.Tag == JsonTag.JSON_ARRAY) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": [\t\t<- {Path()}";
                 else {
-                    if (NodeRawData.Tag == JsonTag.JSON_STRING) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": \"{Value_Viewer}\"\t\t<- {Path}";
+                    if (NodeRawData.Tag == JsonTag.JSON_STRING) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": \"{Value_Viewer}\"\t\t<- {Path()}";
                     else if (NodeRawData.Tag == JsonTag.JSON_NUMBER
-                          || NodeRawData.Tag == JsonTag.JSON_NUMBER_STR) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": {Value_Viewer}\t\t<- {Path}";
+                          || NodeRawData.Tag == JsonTag.JSON_NUMBER_STR) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": {Value_Viewer}\t\t<- {Path()}";
                     else if (NodeRawData.Tag > JsonTag.JSON_OBJECT) {
-                        if (NodeRawData.Tag == JsonTag.JSON_FALSE) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": false\t\t<- {Path}";
-                        else if (NodeRawData.Tag == JsonTag.JSON_TRUE) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": true\t\t<- {Path}";
-                        else if (NodeRawData.Tag == JsonTag.JSON_NULL) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": null\t\t<- {Path}";
+                        if (NodeRawData.Tag == JsonTag.JSON_FALSE) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": false\t\t<- {Path()}";
+                        else if (NodeRawData.Tag == JsonTag.JSON_TRUE) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": true\t\t<- {Path()}";
+                        else if (NodeRawData.Tag == JsonTag.JSON_NULL) retVal = $"{Level_Viewer} {retVal}\"{Key_Viewer}\": null\t\t<- {Path()}";
                         else retVal = "Not implemented !";
-                    } else retVal = $"{Level_Viewer} {retVal}{Tag_Viewer}: \"{Key_Viewer}\": {Value_Viewer}\t\t<- {Path}";
+                    } else retVal = $"{Level_Viewer} {retVal}{Tag_Viewer}: \"{Key_Viewer}\": {Value_Viewer}\t\t<- {Path()}";
                 }
             } else {
-                if (NodeRawData.Tag == JsonTag.JSON_ARRAY) retVal = $"{Level_Viewer} {retVal}[\t\t<- {Path}";
-                else if(NodeRawData.Tag == JsonTag.JSON_OBJECT) retVal = $"{Level_Viewer} {retVal}{{\t\t<- {Path}";
+                if (NodeRawData.Tag == JsonTag.JSON_ARRAY) retVal = $"{Level_Viewer} {retVal}[\t\t<- {Path()}";
+                else if(NodeRawData.Tag == JsonTag.JSON_OBJECT) retVal = $"{Level_Viewer} {retVal}{{\t\t<- {Path()}";
                 else {
-                    if (NodeRawData.Tag == JsonTag.JSON_STRING) retVal = $"{Level_Viewer} {retVal}\"{Value_Viewer}\"\t\t<- {Path}";
+                    if (NodeRawData.Tag == JsonTag.JSON_STRING) retVal = $"{Level_Viewer} {retVal}\"{Value_Viewer}\"\t\t<- {Path()}";
                     else if (NodeRawData.Tag == JsonTag.JSON_NUMBER
-                          || NodeRawData.Tag == JsonTag.JSON_NUMBER_STR) retVal = $"{Level_Viewer} {retVal}{Value_Viewer}\t\t<- {Path}";
+                          || NodeRawData.Tag == JsonTag.JSON_NUMBER_STR) retVal = $"{Level_Viewer} {retVal}{Value_Viewer}\t\t<- {Path()}";
                     else if (NodeRawData.Tag > JsonTag.JSON_OBJECT) {
-                        if (NodeRawData.Tag == JsonTag.JSON_FALSE) retVal = $"{Level_Viewer} {retVal}false\t\t<- {Path}";
-                        else if (NodeRawData.Tag == JsonTag.JSON_TRUE) retVal = $"{Level_Viewer} {retVal}true\t\t<- {Path}";
-                        else if (NodeRawData.Tag == JsonTag.JSON_NULL) retVal = $"{Level_Viewer} {retVal}null\t\t<- {Path}";
+                        if (NodeRawData.Tag == JsonTag.JSON_FALSE) retVal = $"{Level_Viewer} {retVal}false\t\t<- {Path()}";
+                        else if (NodeRawData.Tag == JsonTag.JSON_TRUE) retVal = $"{Level_Viewer} {retVal}true\t\t<- {Path()}";
+                        else if (NodeRawData.Tag == JsonTag.JSON_NULL) retVal = $"{Level_Viewer} {retVal}null\t\t<- {Path()}";
                         else retVal = "Not implemented !";
-                    } else retVal = $"{Level_Viewer} {retVal}{Tag_Viewer}: {Value_Viewer}\t\t<- {Path}";
+                    } else retVal = $"{Level_Viewer} {retVal}{Tag_Viewer}: {Value_Viewer}\t\t<- {Path()}";
                 }
             }
             return retVal;

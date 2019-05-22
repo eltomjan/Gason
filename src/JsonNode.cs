@@ -15,7 +15,9 @@ namespace Gason
         protected JsonNode node;
 
         public ref JsonNode NextTo { get { return ref next; } }
+        public void SetNextTo(JsonNode newNode) { next = newNode; }
         public ref JsonNode NodeBelow { get { return ref node; } }
+        public void SetNodeBelow(ref JsonNode newNode) { node = newNode; }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public JsonNode() {}

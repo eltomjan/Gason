@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Gason
 {
@@ -14,7 +15,8 @@ namespace Gason
         public int m_Indent { get; set; } = 0;
         public int m_debugModeLimit { get; set; }
 #pragma warning restore IDE1006 // Naming Styles
-        Stack<JsonNode> levelStack = new Stack<JsonNode>();
+        private Stack<JsonNode> levelStack = new Stack<JsonNode>();
+        private List<int> nos;
         public VisualNode3(ref JsonNode my, Byte[] src, int debugModeLimit)
         {
             NodeRawData = my;
@@ -148,6 +150,100 @@ namespace Gason
                     return retVal + "\n... cycle here";
                 }
             } while (o != null || (levelStack.Count > 0)) ;
+            return retVal;
+        }
+        protected void BlockEndXML(JsonNode o, ref StringBuilder retVal, String newLine)
+        {
+            if (o.Tag != JsonTag.JSON_OBJECT && o.Tag != JsonTag.JSON_ARRAY) return;
+            if (m_Indent > -1) {
+                m_Indent -= m_Shift_Width;
+                if(m_Indent > 0) retVal.Append(' ', m_Indent);
+            }
+            if (o.HasKey) retVal.Append("</").Append(o.Key(src)).Append('>').Append(newLine);
+            else {
+                int no = nos.Count - 1;
+                retVal.Append("</No").Append(nos[no]++).Append('>').Append(newLine);
+                if(null == o.NodeBelow.NextTo) nos[no] = 1;
+            }
+        }
+        public StringBuilder DumpXMLValueIterative(JsonNode o)
+        {
+            JsonNode startNode = o;
+            String newLine;
+            StringBuilder retVal = new StringBuilder();
+            if (m_Indent > -1) { newLine = "\n"; m_Indent = 0; }
+            else { newLine = ""; }
+            JsonTag startTag;
+            nos = new List<int>();
+            do
+            {
+                if (m_Indent > -1) retVal.Append(' ', m_Indent); // Start with m_Indent 
+                startTag = o.Tag;
+                if (startTag == JsonTag.JSON_OBJECT || startTag == JsonTag.JSON_ARRAY) {
+                    String open = "";
+                    if (startTag == JsonTag.JSON_ARRAY) open = "<EmptyArray></EmptyArray>"; else open = "<EmptyObject></EmptyObject>";
+                    if (o.ToNode() == null) {
+                        if (o.HasKey) retVal.Append('<').Append(o.Key(src)).Append('>');
+                        if (o.NodeBelow.NextTo == null) retVal.Append(open);
+                        else retVal.Append(open).Append(newLine);
+                        if (o.HasKey) retVal.Append("</").Append(o.Key(src)).Append(">");
+                        if (o.NodeBelow.NextTo == null) retVal.Append(newLine);
+                        if (o.NodeBelow.NextTo == null) o = o.NodeBelow;
+                    } else {
+                        if (o.HasKey) retVal.Append('<').Append(o.Key(src)).Append(">");
+                        else {
+                            if (startNode == o) {
+                                nos.Add(1);
+                                retVal.Append("<ROOT>");
+                            } else retVal.Append("<No").Append(nos[nos.Count-1]).Append('>');
+                            while (nos.Count < levelStack.Count) nos.Add(1);
+                        }
+                        if (o.ToNode() != null) retVal.Append(newLine);
+                        if (o.ToNode() == null && o.NodeBelow.NextTo != null) BlockEndXML(o, ref retVal, newLine);
+                        if (m_Indent > -1) m_Indent += m_Shift_Width;
+                    }
+                } else if (startTag == JsonTag.JSON_STRING || startTag == JsonTag.JSON_NUMBER || startTag == JsonTag.JSON_NUMBER_STR) {
+                    String quote = (startTag == JsonTag.JSON_STRING) ? "\"" : "";
+                    if (o.HasKey) {
+                        retVal.Append('<').Append(o.Key(src)).Append('>').Append(o.ToString(src)).Append("</").Append(o.Key(src)).Append('>').Append(newLine); // "key": "value"(,)
+                    } else retVal.Append(quote).Append(o.ToString(src)).Append(quote).Append($"{(o.NodeBelow.NextTo != null ? "," : "")}{newLine}"); // "value"(,)
+                } else if (startTag == JsonTag.JSON_TRUE || startTag == JsonTag.JSON_FALSE || startTag == JsonTag.JSON_NULL) {
+                    String word;
+                    if (startTag == JsonTag.JSON_TRUE) word = "true";
+                    else if (startTag == JsonTag.JSON_FALSE) word = "false";
+                    else word = "null";
+                    if (o.HasKey) {
+                        retVal.Append('<').Append(o.Key(src)).Append('>').Append(word).Append("</").Append(o.Key(src)).Append('>').Append(newLine); // "key": "value"(,)
+                    } else retVal.Append(word).Append($"{(o.NodeBelow.NextTo != null ? "," : "")}{newLine}"); // "value"(,)
+                }
+                if(o != null) {
+                    if (o.NodeBelow != null && (startTag == JsonTag.JSON_ARRAY || startTag == JsonTag.JSON_OBJECT))
+                    { // move down 2 node of structured object
+                        levelStack.Push(o);
+                        o = o.NodeBelow;
+                    } else { // move right to values
+                        if (o.NodeBelow.NextTo != null) o = o.NodeBelow.NextTo;
+                        else o = o.NodeBelow; // always null (4 null || non-structured)
+                    }
+                }
+                while (o == null && levelStack.Count > 0)
+                { // return back after iterations
+                    do {
+                        o = levelStack.Pop();
+                        if (o.Tag == JsonTag.JSON_ARRAY || o.Tag == JsonTag.JSON_OBJECT)
+                        { // Array / Object end markers
+                            if (o == startNode) return retVal.Append("</ROOT>");
+                            else BlockEndXML(o, ref retVal, newLine);
+                        }
+                    } while ((levelStack.Count > 1) && ((o == null || (o.NodeBelow.NextTo == null && (o.NodeBelow == null || o.NodeBelow?.NodeBelow?.NextTo == null)))));
+                    o = o.NodeBelow.NextTo; // move right
+                }
+                if (o == startNode)
+                {
+                    if (m_Indent > -1) m_Indent = 0;
+                    return retVal.Append("\n... cycle here");
+                }
+            } while (o != null || (levelStack.Count > 0));
             return retVal;
         }
         public override string ToString()
