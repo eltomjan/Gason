@@ -16,6 +16,9 @@ public class Program
 
         String[] jsons =
 @"{
+  'id': '000',
+  'id': '00',
+  'id': '0',
   'id': '0001',
   'type': 'donut',
   'name': 'Cake',
@@ -114,25 +117,22 @@ public class Program
 #if !KEY_SPLIT
         jsonParser.SortPaths(jsn, raw, null);
         Console.WriteLine("Sort result:");
-#endif
         using (StreamWriter sw = new StreamWriter(Console.OpenStandardOutput()))
         {
             sw.AutoFlush = true;
             wr.DumpValueIterative(sw, jsn, raw);
         }
-#if !KEY_SPLIT
         endPos = -1;
-#endif
+#else
         jsonParser.Parse(raw, ref endPos, out jsn
-#if KEY_SPLIT
             , keys, 2, endPos, 2
-#endif
             ); // and now following 2
         using (StreamWriter sw = new StreamWriter(Console.OpenStandardOutput()))
         {
             sw.AutoFlush = true;
             wr.DumpValueIterative(sw, jsn, raw);
         }
+#endif
 
         // Twiter complex json -> TC
         raw = Encoding.UTF8.GetBytes(Tests.ReadFile("pass6.json"));

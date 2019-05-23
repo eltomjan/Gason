@@ -38,6 +38,28 @@ namespace Gason
             if (keyIdxes.length == 0) return "";
             else return Encoding.UTF8.GetString(src, keyIdxes.pos, keyIdxes.length) + " :";
         }
+        public Boolean KeysEqual(Byte[] src, P_ByteLnk nd)
+        {
+            if (keyIdxes.length != nd.length) return false;
+            int length = keyIdxes.length;
+            for (int i = 0; i < length; i++)
+            {
+                if (src[keyIdxes.pos + i] != src[nd.pos + i]) return false;
+            }
+            return true;
+        }
+        public Boolean VakuesEqual(Byte[] src, JsonNode nd)
+        {
+            if (Tag != nd.Tag) return false;
+            if (doubleOrString.length != nd.doubleOrString.length) return false;
+            if (Tag == JsonTag.JSON_NUMBER) return doubleOrString.number == nd.doubleOrString.number;
+            int length = doubleOrString.length;
+            for (int i = 0; i < length; i++)
+            {
+                if (src[doubleOrString.pos + i] != src[nd.doubleOrString.pos + i]) return false;
+            }
+            return true;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void InsertAfter(JsonNode orig)
