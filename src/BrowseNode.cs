@@ -56,6 +56,7 @@ namespace Gason
                 } else return null;
             }
         }
+        public String Path_Viewer { get { return Path(); } }
         public String Path(Boolean sortable = false)
         {
             BrowseNode end = this;

@@ -22,12 +22,12 @@ public class Program
   'ppu': 0.55,
   'batters': [
     {
-      'id': '1002',
-      'type': 'Chocolate'
-    },
-    {
       'id': '1003',
       'type': 'Blueberry'
+    },
+    {
+      'id': '1002',
+      'type': 'Chocolate'
     },
     {
       'id': '1004',
@@ -111,6 +111,10 @@ public class Program
 #endif
             ); // batters / null path, read only 1st 2
         ValueWriter wr = new ValueWriter();
+#if !KEY_SPLIT
+        jsonParser.SortPaths(jsn, raw, null);
+        Console.WriteLine("Sort result:");
+#endif
         using (StreamWriter sw = new StreamWriter(Console.OpenStandardOutput()))
         {
             sw.AutoFlush = true;
