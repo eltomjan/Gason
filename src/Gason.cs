@@ -536,9 +536,8 @@ namespace Gason
                         if (JsonTag.JSON_ARRAY == keyNode.Tag_Viewer || JsonTag.JSON_OBJECT == keyNode.Tag_Viewer) s.Push(keyNode);
                         if (id != null && id == keyNode.KeyPrint) { // If ID matche this one, use it in path not as column value
                             key = $"\\{keyNode.Value_Viewer}";
-                        } else {
-                            lastChildrens.Add(new NodeComparer(keyNode, JSONdata));
                         }
+                        lastChildrens.Add(new NodeComparer(keyNode, JSONdata));
                         keyNode = keyNode.Next_Viewer;
                     }
                     lastChildrens.Sort();
@@ -576,20 +575,19 @@ namespace Gason
                 if (current.Level_Viewer > pred.Level_Viewer) {
                     FixArraysOrder(current);
                 }
-                if (current.Level_Viewer >= pred.Level_Viewer) {
-                    current = GetConnectionPath(pred, current);
-                    while (pred.Level_Viewer > current.Level_Viewer) pred = pred.Parent_Viewer;
-                    if (pred.Level_Viewer == 0) {
-                        pred.NodeRawData = current.NodeRawData;
-                        pred.NodeRawData.NextTo = null;
-                    } else {
-                        pred.NodeRawData.NextTo = current.NodeRawData;
-                        current.NodeRawData.NextTo = null;
-                    }
+                while (current.Level_Viewer < pred.Level_Viewer) pred = pred.Parent_Viewer;
+                current = GetConnectionPath(pred, current);
+                while (pred.Level_Viewer > current.Level_Viewer) pred = pred.Parent_Viewer;
+                if (pred.Level_Viewer == 0) {
+                    pred.NodeRawData = current.NodeRawData;
+                    pred.NodeRawData.NextTo = null;
+                } else {
+                    pred.NodeRawData.NextTo = current.NodeRawData;
+                    if(current.NodeRawData.Tag == JsonTag.JSON_ARRAY
+                    || current.NodeRawData.Tag == JsonTag.JSON_OBJECT) current.NodeRawData.NextTo = null;
                 }
                 pred = rows[i].GetLast;
             }
-            current.NodeRawData.NextTo = null;
         }
         public static BrowseNode GetCollection(BrowseNode from, int level = 1) {
             while (from.Level_Viewer > level
