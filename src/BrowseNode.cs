@@ -8,7 +8,12 @@ namespace Gason
         public JsonNode NodeRawData;
         readonly Byte[] src;
         public int Level_Viewer { get; protected set; }
-        public BrowseNode Parent_Viewer { get; private set; }
+        public BrowseNode Parent_Viewer {
+            get {
+                if (NodeRawData.Parent == null) return null;
+                return new BrowseNode(ref NodeRawData.Parent, src) { Level_Viewer = this.Level_Viewer - 1 };
+            }
+        }
         public BrowseNode Pred_Viewer { get; private set; }
         public JsonTag Tag_Viewer { get { return NodeRawData.Tag; } }
         public Boolean HasKey { get { if (null != NodeRawData) return NodeRawData.HasKey; else return false; } }
@@ -36,9 +41,9 @@ namespace Gason
                 {
                     BrowseNode retVal = new BrowseNode(ref NodeRawData.NextTo, src) {
                         Pred_Viewer = this,
-                        Parent_Viewer = this.Parent_Viewer,
                         Level_Viewer = this.Level_Viewer
                     };
+                    retVal.NodeRawData.Parent = NodeRawData.NextTo.Parent ?? NodeRawData.Parent;
                     return retVal;
                 }
                 return null;
@@ -47,11 +52,11 @@ namespace Gason
         public BrowseNode Node_Viewer
         {
             get {
-                if (NodeRawData != null && NodeRawData.ToNode() != null) {
+                if (NodeRawData?.NodeBelow != null) {
                     BrowseNode retVal = new BrowseNode(ref NodeRawData.NodeBelow, src) {
-                        Level_Viewer = Level_Viewer + 1,
-                        Parent_Viewer = this
+                        Level_Viewer = this.Level_Viewer + 1,
                     };
+                    retVal.NodeRawData.Parent = NodeRawData;
                     return retVal;
                 } else return null;
             }
@@ -65,16 +70,16 @@ namespace Gason
             while(end != null) {
                 if(end.HasKey) elements.Push($"{end.Key_Viewer}");
                 else {
-                    if (end.Pred_Viewer == null && end.Next_Viewer == null) {
+                    if (end.Pred_Viewer == null && end.Next_Viewer == null || sortable) {
                         if (end.Tag_Viewer == JsonTag.JSON_ARRAY) elements.Push("[]");
                         else if(end.Tag_Viewer == JsonTag.JSON_OBJECT) elements.Push("{}");
                     } else if(end.Tag_Viewer == JsonTag.JSON_ARRAY
                             || end.Tag_Viewer == JsonTag.JSON_OBJECT) {
                         int pos = 0;
-                        if (sortable) elements.Push($"[]"); else {
-                            while (end.Pred_Viewer != null) { pos++; end = end.Pred_Viewer; }
-                            elements.Push($"[{pos}]");
-                        }
+                        JsonNode start = end.Parent_Viewer.NodeRawData.NodeBelow;
+                        while(start != end.NodeRawData) { pos++; start = start?.NextTo; }
+                        if (end.Tag_Viewer == JsonTag.JSON_ARRAY) elements.Push($"[{pos}]");
+                        else elements.Push($"{{{pos}}}");
                     }
                 }
                 end = end.Parent_Viewer;

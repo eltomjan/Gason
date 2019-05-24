@@ -12,12 +12,18 @@ namespace Gason
         public P_ByteLnk KeyIndexesData { get { return keyIdxes; } }
 
         public P_ByteLnk doubleOrString;
-        protected JsonNode node;
+        private JsonNode parent;
+        public ref JsonNode Parent { get { return ref parent; } }
+        private JsonNode node;
 
         public ref JsonNode NextTo { get { return ref next; } }
         public void SetNextTo(JsonNode newNode) { next = newNode; }
-        public ref JsonNode NodeBelow { get { return ref node; } }
-        public void SetNodeBelow(ref JsonNode newNode) { node = newNode; }
+        public ref JsonNode NodeBelow {
+            get {
+                if (node != null) node.parent = this;
+                return ref node;
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public JsonNode() {}
