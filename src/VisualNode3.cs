@@ -254,7 +254,9 @@ namespace Gason
         {
             get {
                 if (NodeRawData == null) return "NULL";
-                return DumpValueIterative(NodeRawData, m_debugModeLimit > 0);
+                if(m_Indent < 0) m_Indent = 0;
+                String retVal = DumpValueIterative(NodeRawData, m_debugModeLimit > 0);
+                return retVal;
             }
         }
     }

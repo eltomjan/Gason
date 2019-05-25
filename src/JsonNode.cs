@@ -7,16 +7,23 @@ namespace Gason
 {
     public class JsonNode
     { // 16B
-        protected JsonNode next; // 4B
+        private JsonNode next; // 4B
         protected P_ByteLnk keyIdxes;
         public P_ByteLnk KeyIndexesData { get { return keyIdxes; } }
 
         public P_ByteLnk doubleOrString;
         private JsonNode parent;
+        private JsonNode pred;
         public ref JsonNode Parent { get { return ref parent; } }
+        public ref JsonNode Pred { get { return ref pred; } }
         private JsonNode node;
 
-        public ref JsonNode NextTo { get { return ref next; } }
+        public ref JsonNode NextTo {
+            get {
+                if(next != null) next.pred = this;
+                return ref next;
+            }
+        }
         public void SetNextTo(JsonNode newNode) { next = newNode; }
         public ref JsonNode NodeBelow {
             get {
