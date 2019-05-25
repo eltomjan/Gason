@@ -485,15 +485,15 @@ namespace Gason
             public int Idx { get; private set; }
             public int Level { get; set; }
             public static int row = 0;
-            public BrowseNode parentNode;
-            public NodeComparer2(String key, int level, List<NodeComparer> lastChildrens, BrowseNode previousElement) {
+            public int? linkLevel;
+            public NodeComparer2(String key, int level, List<NodeComparer> lastChildrens, int? linkLevel) {
                 Idx = row++;
                 Key = key;
                 Level = level;
                 elements = new List<NodeComparer>();
                 elements.Add(lastChildrens[0]);
                 elements.Add(lastChildrens[lastChildrens.Count - 1]);
-                parentNode = previousElement;
+                this.linkLevel = linkLevel;
             }
             public BrowseNode GetLast { get { return elements[elements.Count - 1].element; } }
             public override string ToString()
@@ -522,7 +522,8 @@ namespace Gason
             s.Push(new BrowseNode(ref root, JSONdata));
             List<NodeComparer2> rows = new List<NodeComparer2>(); // List 2B sort @end
             HashSet<JsonNode> processed = new HashSet<JsonNode>(); // in case of circles...
-            BrowseNode element, previousElement = null;
+            BrowseNode element;
+            int? linkLevel;
             while (s.Count > 0)
             {
                 element = s.Pop();
@@ -533,12 +534,7 @@ namespace Gason
                 }
                 else if (null != element.NodeRawData.NextTo)
                 { // Array of elements here
-                    if(previousElement != null) {
-                        BrowseNode skipUpdate = element;
-                        while (skipUpdate.Level_Viewer > previousElement.Level_Viewer) skipUpdate = skipUpdate.Parent_Viewer;
-                        if(previousElement.NodeRawData?.NextTo != skipUpdate.NodeRawData)
-                            previousElement = FindNextLink(rows[rows.Count - 1].GetLast, element);
-                    }
+                    BrowseNode lastElement = null;
                     if (processed.Contains(element.Parent_Viewer.NodeRawData)) continue;
                     else processed.Add(element.Parent_Viewer.NodeRawData);
                     BrowseNode keyNode = element;
@@ -552,8 +548,10 @@ namespace Gason
                             key = $"\\{keyNode.Value_Viewer}";
                         }
                         lastChildrens.Add(new NodeComparer(keyNode, JSONdata));
+                        lastElement = keyNode;
                         keyNode = keyNode.Next_Viewer;
                     }
+                    linkLevel = FindNextLevel(lastElement);
                     lastChildrens.Sort();
                     pn.SetChild(lastChildrens[0].element); // connect 1st sorted to their parent
                     int count = lastChildrens.Count;
@@ -576,8 +574,7 @@ namespace Gason
                             count--;
                         }
                     }
-                    rows.Add(new NodeComparer2(key, level, lastChildrens, previousElement));
-                    if(previousElement == null) previousElement = element; // not null only
+                    rows.Add(new NodeComparer2(key, level, lastChildrens, linkLevel));
                 }
             }
             rows.Sort(); // Sort rest according 2 full paths
@@ -587,40 +584,35 @@ namespace Gason
             for (int i = 0; i < rowsCount; i++)
             { // Fix connections in order of sorted rows
                 current = rows[i].elements[0].element;
-                if (i > 0 && rows[i - 1].parentNode != rows[i].parentNode) {
-                    BrowseNode connectTo = pred, connectFrom = current;
-                    int level = rows[i].parentNode.Level_Viewer;
+                if (i == 0) {
+                    pred = current;
+                    continue;
+                }
+                BrowseNode connectTo = pred, connectFrom = pred;
+                if (rows[i - 1].linkLevel < rows[i].linkLevel) {
+                    int? level0 = rows[i - 1].linkLevel, level1 = rows[i].linkLevel;
+                    while (connectTo.Level_Viewer > level0) connectTo = connectTo.Parent_Viewer;
+                    while (connectFrom.Level_Viewer > level1) connectFrom = connectFrom.Parent_Viewer;
+                    connectTo.NodeRawData.NodeBelow = connectFrom.NodeRawData;
+                }
+                if (i < rowsCount - 1) {
+                    connectTo = pred; connectFrom = current;
+                    int? level = rows[i].linkLevel;
                     while (connectTo.Level_Viewer > level) connectTo = connectTo.Parent_Viewer;
                     while (connectFrom.Level_Viewer > level) connectFrom = connectFrom.Parent_Viewer;
                     connectTo.NodeRawData.NextTo = connectFrom.NodeRawData;
-                    connectTo = current;
-                    connectFrom = current;
-                    while (connectTo.Level_Viewer > level) connectTo = connectTo.Parent_Viewer;
-                    while (connectFrom.Level_Viewer > level + 1) connectFrom = connectFrom.Parent_Viewer;
-                    while (connectFrom.Level_Viewer >= level) {
-                        if (connectFrom.Parent_Viewer.NodeRawData == connectTo.NodeRawData) {
-                            connectTo.NodeRawData.NodeBelow = connectFrom.NodeRawData;
-                            break;
-                        }
-                        connectFrom = connectFrom.Parent_Viewer;
-                    }
+                    connectFrom.NodeRawData.NextTo = null;
                 }
-                if (i > 0 && rows[i - 1].parentNode == rows[i].parentNode) {
-                    JsonNode parent = rows[i].parentNode.NodeRawData.NextTo;
-                    while(current.Parent_Viewer.NodeRawData != parent) current = current.Parent_Viewer;
-                while (pred.Level_Viewer > current.Level_Viewer) pred = pred.Parent_Viewer;
-                    pred.NodeRawData.NextTo = current.NodeRawData;
-                    current.NodeRawData.NextTo = null;
-                }
-                pred = current;
+                pred = rows[i].GetLast;
             }
         }
-        public static BrowseNode FindNextLink(BrowseNode from, BrowseNode to)
+        public static int? FindNextLevel(BrowseNode lastElement)
         {
-            while (from.Next_Viewer == null) from = from.Parent_Viewer;
-            while (to.Level_Viewer > from.Level_Viewer) to = to.Parent_Viewer;
-            if (from.NodeRawData.NextTo == to.NodeRawData) return from;
-            return null;
+            do {
+                lastElement = lastElement.Parent_Viewer;
+                if (lastElement == null) break;
+            } while (lastElement.Next_Viewer == null);
+            return lastElement?.Level_Viewer;
         }
         public static BrowseNode GetCollection(BrowseNode from, int level = 1) {
             while (from.Level_Viewer > level
@@ -642,21 +634,6 @@ namespace Gason
                 current = current.Parent_Viewer;
             }
             return current;
-        }
-        public static void FixArraysOrder(BrowseNode me)
-        {
-            BrowseNode underMe = null;
-            while (me != null) {
-                if (me.NodeRawData.Tag == JsonTag.JSON_OBJECT || me.NodeRawData.Tag == JsonTag.JSON_ARRAY)
-                {
-                    if (underMe != null && me.NodeRawData.NodeBelow != underMe.NodeRawData) {
-                        me.NodeRawData.NodeBelow = underMe.NodeRawData;
-                        return;
-                    }
-                }
-                underMe = me;
-                me = me.Parent_Viewer;
-            }
         }
         public class ParentNode
         {
