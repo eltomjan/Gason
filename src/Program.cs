@@ -115,13 +115,68 @@ public class Program
             ); // batters / null path, read only 1st 2
         ValueWriter wr = new ValueWriter();
 #if !KEY_SPLIT
+        String[] sort = @"{
+  'id': '0',
+  'id': '00',
+  'id': '000',
+  'id': '0001',
+  'name': 'Cake',
+  'ppu': 0.55,
+  'type': 'donut',
+  'batters': [
+    {
+      'id': '1003',
+      'type': 'Blueberry'
+    },
+    {
+      'id': '1002',
+      'type': 'Chocolate'
+    },
+    {
+      'id': '1004',
+      'type': 'Bad Food'
+    },
+    {
+      'id': '1001',
+      'type': 'Regular'
+    }
+  ]
+}
+|{
+  'batters': [
+    {
+      'id': '1001',
+      'type': 'Regular'
+    },
+    {
+      'id': '1002',
+      'type': 'Chocolate'
+    },
+    {
+      'id': '1003',
+      'type': 'Blueberry'
+    },
+    {
+      'id': '1004',
+      'type': 'Bad Food'
+    }
+  ],
+  'id': '0',
+  'id': '00',
+  'id': '000',
+  'id': '0001',
+  'name': 'Cake',
+  'ppu': 0.55,
+  'type': 'donut'
+}
+".Replace('\'','"').Replace("\r\n", "\n").Split('|');
         jsonParser.SortPaths(jsn, raw, null);
-        Console.WriteLine("Sort result:");
-        using (StreamWriter sw = new StreamWriter(Console.OpenStandardOutput()))
-        {
-            sw.AutoFlush = true;
-            wr.DumpValueIterative(sw, jsn, raw);
-        }
+        v1 = new BrowseNode(ref jsn, raw);
+        String check = prn.Print(ref v1, 0).ToString();
+        if (sort[0] != check) Console.WriteLine($"SortPaths error:\n{check}");
+        jsonParser.SortPaths(jsn, raw, "id");
+        check = prn.Print(ref v1, 0).ToString();
+        if (sort[1] != check) Console.WriteLine($"SortPaths error:\n{check}");
         endPos = -1;
 #else
         jsonParser.Parse(raw, ref endPos, out jsn
@@ -254,12 +309,13 @@ public class Program
     }
   ]
 }
-".Replace("'","\"").Replace("\r\n","\n").Split('|');
+".Replace("'", "\"").Replace("\r\n", "\n").Split('|');
         if (v1.NodeRawData == null) Console.WriteLine("Bug - 1st JSON empty");
         else if (results[0] == prn.Print(ref v1, 0).ToString()) Console.WriteLine($"Twitter check 1/2 OK - 2nd file has expected content:\n{results[0]}");
+        else Console.WriteLine("Bug demo print result 1/2 differs.");
         if (v2.NodeRawData == null) Console.WriteLine("Bug - 2nd JSON empty");
         else if (results[1] == prn.Print(ref v2, 0).ToString()) Console.WriteLine($"Twitter check 2/2 OK - 2nd file has expected content:\n{results[1]}");
-        else Console.WriteLine("Bug demo print result differs.");
+        else Console.WriteLine("Bug demo print result 2/2 differs.");
 
         raw = File.ReadAllBytes(@"citylots.json");
         Benchmark b = new Benchmark(raw);

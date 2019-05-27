@@ -11,11 +11,12 @@ namespace Gason
             get { return current; }
             set {
                 current = value;
-                BrowseNode cnt = value;
                 Level = -1;
+                if (value?.NodeRawData == null) return;
+                JsonNode cnt = value.NodeRawData;
                 while (cnt != null) {
                     Level++;
-                    cnt = cnt.Parent_Viewer;
+                    cnt = cnt?.Parent;
                 }
             }
         }

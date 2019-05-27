@@ -17,7 +17,6 @@ namespace Gason
         public ref JsonNode Parent { get { return ref parent; } }
         public ref JsonNode Pred { get { return ref pred; } }
         private JsonNode node;
-
         public ref JsonNode NextTo {
             get {
                 if(next != null) next.pred = this;
@@ -110,7 +109,6 @@ namespace Gason
                 head = tail.NextTo;
                 tail.NextTo = null;
                 NodeBelow = head;
-                //doubleOrString = head.doubleOrString;
                 doubleOrString.data = 0;
             }
         }

@@ -60,7 +60,6 @@ namespace Gason
                     BrowseNode retVal = new BrowseNode(ref NodeRawData.NodeBelow, src) {
                         Level_Viewer = this.Level_Viewer + 1,
                     };
-                    retVal.NodeRawData.Parent = NodeRawData;
                     return retVal;
                 } else return null;
             }
@@ -81,7 +80,7 @@ namespace Gason
                             || end.Tag_Viewer == JsonTag.JSON_OBJECT) {
                         int pos = 0;
                         JsonNode start = end.Parent_Viewer.NodeRawData.NodeBelow;
-                        while(start != end.NodeRawData) { pos++; start = start?.NextTo; }
+                        while(start != null && start != end.NodeRawData) { pos++; start = start?.NextTo; }
                         if (end.Tag_Viewer == JsonTag.JSON_ARRAY) elements.Push($"[{pos}]");
                         else elements.Push($"{{{pos}}}");
                     }
@@ -177,13 +176,6 @@ namespace Gason
             NodeRawData.NextTo = newNext;
             return true;
         }
-        public void ReplaceNode(JsonNode newNode)
-        {
-            JsonNode old = NodeRawData;
-            NodeRawData = newNode;
-            if (old.NextTo != null) NodeRawData.NextTo = old.NextTo;
-            if (old.NodeBelow != null && old.NodeBelow == null) NodeRawData.NodeBelow = old.NodeBelow;
-        }
         public void SkipNext()
         {
             NodeRawData.NextTo = NodeRawData.NextTo?.NextTo;
@@ -200,7 +192,8 @@ namespace Gason
             //if (Parent_Viewer?.NodeRawData != null) parent = new VisualNode3(ref Parent_Viewer.NodeRawData, src, 10000);
             //if (Pred_Viewer?.NodeRawData != null) pred = new VisualNode3(ref Pred_Viewer.NodeRawData, src, 10000);
             //if (NodeRawData != null) me = new VisualNode3(ref NodeRawData, src, 10000);
-            //Console.WriteLine($"Arround {arround}");
+            //Console.WriteLine($"RemoveCurrent arround {arround}");
+            //Console.WriteLine($"RemoveCurrent arround {arround} value {Value_Viewer}");
             //if (parent == pred && me != null && arround > 0) ;
 
             BrowseNode retVal = null, retVal2 = null;
@@ -221,19 +214,23 @@ namespace Gason
                     if (retVal2 == null || retVal2.NodeRawData == null) return retVal;
                     return retVal2;
                 case 7: // <-> a -> me => <-> a -> null | Parent / Pred, Node, -
+                    retVal = Pred_Viewer;
                     if (!Pred_Viewer.ReplaceNext(null)) return null; // Link Pred -> Next(=null)
+                    NodeRawData.NodeBelow = null;
                     NodeRawData = null;
-                    return Pred_Viewer; 
+                    return retVal;
                 case 13: // me -> a                     | Parent / - , Node, Next
                     retVal = Next_Viewer;
                     Parent_Viewer.NodeRawData.NodeBelow = NodeRawData.NextTo;
                     NodeRawData.NextTo = null; // clear me -> a
+                    NodeRawData.NodeBelow = null;
                     NodeRawData = null; // clear me
                     return retVal; // next @next
                 case 15: // a -> me -> b => a -> b      | Parent, Pred, Node, Next
                     Pred_Viewer.SkipNext();
                     retVal = Pred_Viewer.Next_Viewer; // new Next (2x)
                     NodeRawData.NextTo = null; // clear me -> b
+                    NodeRawData.NodeBelow = null;
                     NodeRawData = null; // clear me
                     return retVal; // next @next
                 default:
@@ -258,7 +255,8 @@ namespace Gason
             //if (Parent_Viewer?.NodeRawData != null) parent = new VisualNode3(ref Parent_Viewer.NodeRawData, src, 10000);
             //if (Pred_Viewer?.NodeRawData != null) pred = new VisualNode3(ref Pred_Viewer.NodeRawData, src, 10000);
             //if (NodeRawData != null) me = new VisualNode3(ref NodeRawData, src, 10000);
-            //Console.WriteLine($"Arround {arround}");
+            //Console.WriteLine($"RemoveEmpties arround {arround}");
+            //Console.WriteLine($"RemoveEmpties arround {arround} value {Value_Viewer} parent {parent}");
             //if (parent == pred && me != null && arround > 0) ;
 
             BrowseNode retVal = null, retVal2 = null, retVal3 = null;
@@ -281,9 +279,11 @@ namespace Gason
                     return retVal;
                 case 7: // <-> a -> me => <-> a -> null | Parent / Pred, Node, -
                     if (NodeRawData.NodeBelow != removed) return this;
+                    retVal = Pred_Viewer;
                     if (!Pred_Viewer.ReplaceNext(null)) return null; // Link Pred -> Next(=null)
+                    NodeRawData.NodeBelow = null;
                     NodeRawData = null;
-                    return Pred_Viewer;
+                    return retVal;
                 case 13: // me -> a                     | Parent / - , Node, Next
                     if (NodeRawData.NodeBelow != removed) return this;
                     retVal = Next_Viewer;
@@ -297,6 +297,7 @@ namespace Gason
                     Pred_Viewer.SkipNext();
                     retVal = Pred_Viewer.Next_Viewer; // new Next (2x)
                     NodeRawData.NextTo = null; // clear me -> b
+                    NodeRawData.NodeBelow = null;
                     NodeRawData = null; // clear me
                     return retVal; // next @next
                 default:
