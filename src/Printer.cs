@@ -15,7 +15,7 @@ namespace Gason
             BrowseNode root = new BrowseNode(ref start, src);
             return Print(ref root, indent);
         }
-        public StringBuilder Print(ref BrowseNode current, int _indent)
+        public StringBuilder Print(ref BrowseNode current, int _indent, Boolean debugInfo = false)
         {
             BrowseNode currentNode = current;
             printing = new StringBuilder();
@@ -32,6 +32,13 @@ namespace Gason
             {
                 if (indent > -1) printing.Append(new String(' ', indent)); // Start with indent 
                 startTag = currentNode.NodeRawData.Tag;
+                if(debugInfo) {
+                    JsonNode around = currentNode.NodeRawData;
+                    if (around.Pred != null) printing.Append('<');
+                    if (around.Parent != null) printing.Append('^');
+                    if (around.NodeBelow != null) printing.Append(@"\/");
+                    if (around.NextTo != null) printing.Append('>');
+                }
                 if (startTag == JsonTag.JSON_OBJECT || startTag == JsonTag.JSON_ARRAY) {
                     String open = "";
                     if (startTag == JsonTag.JSON_ARRAY) open = "[]"; else open = "{}";
@@ -113,5 +120,28 @@ namespace Gason
                 retVal.Append("]" + ((o.NodeRawData.NextTo != null ? "," : "") + newLine));
             }
         }
+/*/
+        public String PrintStructureInfo(JsonNode start, Byte[] src, int indent)
+        {
+            String retVal;
+            Queue<String> nodeNames = new Queue<String>();
+            Queue<JsonNode> whereNext = new Queue<JsonNode>();
+            HashSet<JsonNode> visited = new HashSet<JsonNode>();
+            int i = 0;
+            retVal = JsonNode.PrintStructureInfo(i++, ref start, src, indent);
+            visited.Add(start);
+            do {
+                nodeNames = start.PushNodes(ref visited,ref whereNext);
+                if (whereNext.Count == 0) break;
+                start = whereNext.Dequeue();
+                if (!visited.Contains(start)) {
+                    visited.Add(start);
+                    retVal += //nodeNames.Dequeue() +
+                         JsonNode.PrintStructureInfo(i++, ref start, src, indent);
+                }
+            } while (true);
+            return retVal;
+        }
+//*/
     }
 }

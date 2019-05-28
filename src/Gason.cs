@@ -205,7 +205,7 @@ namespace Gason
                             return JsonErrno.UNEXPECTED_CHARACTER;
 #endif
 #if DEBUGGING
-                        o.ListToValue(JsonTag.JSON_OBJECT, tails[pos]?.NodeRawData);
+                        o.ListToValue(JsonTag.JSON_OBJECT, tails[pos]?.NodeRawData); // o=parent, tails[pos]=last, 1st, ...
                         pos--;
 #else
                         o.ListToValue(JsonTag.JSON_OBJECT, tails[pos--]);
@@ -341,84 +341,83 @@ namespace Gason
                 {
 #endif
                 if (tags[pos] == JsonTag.JSON_OBJECT)
+                {
+                    if (keys[pos].length == -1)
                     {
-                        if (keys[pos].length == -1)
-                        {
 #if !SKIP_VALIDATION
-                            if (o.Tag != JsonTag.JSON_STRING)
-                                return JsonErrno.UNQUOTED_KEY;
+                        if (o.Tag != JsonTag.JSON_STRING)
+                            return JsonErrno.UNQUOTED_KEY;
 #endif
 #if DEBUGGING
-                            keys[pos] = new LinkedByteString(o.doubleOrString);
+                        keys[pos] = new LinkedByteString(o.doubleOrString);
 #else
-                            keys[pos].data = o.doubleOrString.data;
+                        keys[pos].data = o.doubleOrString.data;
 #endif
 #if KEY_SPLIT
-                            if (bubbleOut) continue;
-                            else break;
+                        if (bubbleOut) continue;
+                        else break;
 #else
-                            continue;
+                        continue;
 #endif
                     }
 #if DEBUGGING
-                    o.InsertAfter(tails[pos]?.NodeRawData, ref keys[pos].idxes);
+                    o.InsertAfter(tails[pos]?.NodeRawData, ref keys[pos].idxes); // next2 last & before first
 #else
                     o.InsertAfter(tails[pos] != null ? tails[pos] : null, ref keys[pos]);
 #endif
-                    }
-                    else
-                    {
+                } else {
 #if DEBUGGING
-                        o.InsertAfter(tails[pos]?.NodeRawData);
+                            o.InsertAfter(tails[pos]?.NodeRawData);
 #else
-                        o.InsertAfter(tails[pos]);
+                            o.InsertAfter(tails[pos]);
 #endif
-                    }
-                    tails[pos] =
+                }
+                tails[pos] =
 #if DEBUGGING
-                        new VisualNode3(ref o, s, 3000);
+                new VisualNode3(ref o, s, 3000);
 #else
-                        o;
+                o;
 #endif
-                    o = new JsonNode();
+                o = new JsonNode();
 #if DEBUGGING
-                    root.ChangeNode(o);
+                root.ChangeNode(o);
 #endif
 
 #if KEY_SPLIT
-                    if (bubbleOut)
-                    {
-                        if (tags[pos] == JsonTag.JSON_ARRAY
-                        || tags[pos] == JsonTag.JSON_OBJECT)
-                        { // lists close brackets
+                if (bubbleOut)
+                {
+                    if (tags[pos] == JsonTag.JSON_ARRAY
+                    || tags[pos] == JsonTag.JSON_OBJECT)
+                    { // lists close brackets
 #if DEBUGGING
-                            o.ListToValue(tags[pos], tails[pos]?.NodeRawData);
+                        o.ListToValue(tags[pos], tails[pos]?.NodeRawData);
 #else
-                            o.ListToValue(tags[pos], tails[pos]);
+                        o.ListToValue(tags[pos], tails[pos]);
 #endif
-                        }
-                        if (pos-- == 0)
-                        {
-                            while ((strPos < len) && s[strPos++] != ',') ; // find array separator
-                            while ((strPos < len) && ((SearchTables.specialTypes[s[strPos]] & 3) != 0)) strPos++; // skip delims
-                            while ((strPos < len) && (s[strPos] != '{')) strPos++; // array start
-                            if (strPos < len) strPos++;
-                            endPos = strPos;
-                            value = o;
-                            return JsonErrno.OK;
-                        }
                     }
-                    else break;
-                } while (true); // exit by breaks
+                    if (pos-- == 0)
+                    {
+                        while ((strPos < len) && s[strPos++] != ',') ; // find array separator
+                        while ((strPos < len) && ((SearchTables.specialTypes[s[strPos]] & 3) != 0)) strPos++; // skip delims
+                        while ((strPos < len) && (s[strPos] != '{')) strPos++; // array start
+                        if (strPos < len) strPos++;
+                        endPos = strPos;
+                        value = o;
+                        return JsonErrno.OK;
+                    }
+                }
+                else break;
+            } while (true); // exit by breaks
 #endif
             }
             return JsonErrno.BREAKING_BAD;
         }
         public void RemoveTwins(ref BrowseNode v1, ref BrowseNode v2)
         {
+            Printer prn = new Printer();
             BreadthFirst bf1 = new BreadthFirst(v1);
             BreadthFirst bf2 = new BreadthFirst(v2);
-            BrowseNode traversal = bf1.Next();
+            JsonNode traversal = bf1.Next();
             Boolean removed = false;
             int removeNo = 0;
             do
@@ -427,27 +426,33 @@ namespace Gason
                 {
                     if (bf2.Current != null) while (bf1.Level == bf2.Level && bf2.Next() != null) ;
                     if (bf2.Current != null) while (bf1.Level != bf2.Level && bf2.Next() != null) ;
-                    else bf2.Current = bf2.Root;
+                    else bf2.Current = bf2.root;
                 }
                 else traversal = bf1.Next();
                 if (bf2.Level < 0) bf2.Current = bf2.Root;
                 do
                 {
-                    removed = bf1.NextAs(bf2);
+                    removed = bf1.NextAs(bf1.src, bf2, bf2.src);
                     if (removed && bf1.Orphan && bf2.Orphan)
                     {
                         removeNo++;
+                        //Console.Write($"1> {prn.Print(ref v1, 0, true).ToString()}\nRemoving:{bf1}\n");
                         traversal = bf1.RemoveCurrent();
+                        //Console.Write($"1< {prn.Print(ref v1, 0, true).ToString()}");
+                        //Console.Write($"2> {prn.Print(ref v2, 0, true).ToString()}\nRemoving:{bf2}\n");
                         bf2.RemoveCurrent();
-                        if (traversal == null || traversal.NodeRawData == null
-                        || bf1.Root.NodeRawData == null
-                        || bf2.Root.NodeRawData == null)
+                        //Console.Write($"2< {prn.Print(ref v2, 0, true).ToString()}");
+                        if (traversal == null
+                        || bf1.Root == null
+                        || bf2.Root == null)
                         {
                             traversal = null;
                             break;
                         }
-                    }
-                    else removed = false;
+                    } else
+                    if (!removed) {
+                        break; 
+                    } else removed = false;
                 } while (removed);
                 if (!removed) traversal = bf1.Next();
             } while (traversal != null);
@@ -590,6 +595,7 @@ namespace Gason
                     for (int i = 1; i < count; i++)
                     { // reconnect array in sort order
                         lastChildrens[i - 1].element.NodeRawData.NextTo = lastChildrens[i].element.NodeRawData;
+                        lastChildrens[i].element.NodeRawData.Pred = lastChildrens[i - 1].element.NodeRawData;
                     }
                     key = (element.Parent_Viewer ?? element).Path(true) + key; // Create path and append ID value
                     for (int i = 0; i < count; i++)
@@ -648,8 +654,10 @@ namespace Gason
                 } else*/ left = right;
                 while (connectTo.Level_Viewer > left) connectTo = connectTo.Parent_Viewer;
                 while (connectFrom.Level_Viewer > right) connectFrom = connectFrom.Parent_Viewer;
-                if (connectTo.Level_Viewer > 0) connectTo.NodeRawData.NextTo = connectFrom.NodeRawData;
-                else Connect2root(connectTo, connectFrom);
+                if (connectTo.Level_Viewer > 0) {
+                    connectTo.NodeRawData.NextTo = connectFrom.NodeRawData;
+                    connectFrom.NodeRawData.Pred = connectTo.NodeRawData;
+                } else Connect2root(connectTo, connectFrom);
                 connectFrom = rows[i].GetLast;
                 while (connectFrom.Level_Viewer > left) connectFrom = connectFrom.Parent_Viewer;
                 JsonNode loop = connectFrom.NodeRawData.NextTo;
@@ -670,6 +678,7 @@ namespace Gason
             int? level2 = rows[rows.Count - 1].TopLevel;
             if (level2 == 0) level2 = rows[rows.Count - 1].BottomLevel;
             while (lastFrom.Level_Viewer > level2) lastFrom = lastFrom.Parent_Viewer;
+            while (lastFrom?.NodeRawData?.NextTo == null && lastFrom?.Parent_Viewer != null) lastFrom = lastFrom.Parent_Viewer;
             lastFrom.NodeRawData.NextTo = null;
         }
         public static int? FindNextLevel(BrowseNode lastElement)
@@ -738,6 +747,7 @@ namespace Gason
                             return;
                         }
                         if(me.NodeRawData.NodeBelow != underMe.NodeRawData) {
+                            underMe.NodeRawData.Pred = null;
                             me.NodeRawData.NodeBelow = underMe.NodeRawData;
                             return;
                         }
@@ -751,6 +761,7 @@ namespace Gason
         public static void Connect2root(BrowseNode root, BrowseNode element, Boolean clearNext = false)
         {
             JsonNode me = root.NodeRawData.NodeBelow, el = element.NodeRawData; // Add 2 TopLevel list
+            me.Pred = null;
             if (me == el.NodeBelow) return;
             if (element.Level_Viewer == 0) el = el.NodeBelow;
             while (me.NextTo != null) {
@@ -758,6 +769,7 @@ namespace Gason
                 me = me.NextTo;
             }
             me.NextTo = el;
+            el.Pred = me;
             if (clearNext) me.NextTo.NextTo = null;
             return;
         }

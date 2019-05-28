@@ -86,6 +86,7 @@ public class Program
             , new ByteString[] { }, 0, 0, 0
 #endif
         );
+        Printer prn = new Printer();
         BrowseNode v1 = new BrowseNode(ref jsn1, raw);
 
         raw = Encoding.UTF8.GetBytes(jsons[2]);
@@ -94,11 +95,12 @@ public class Program
             , new ByteString[] { }, 0, 0, 0
 #endif
         );
+        jsonParser.SortPaths(jsn2, raw, null);
         BrowseNode v2 = new BrowseNode(ref jsn2, raw);
 
+        //Console.Read();
         jsonParser.RemoveTwins(ref v1, ref v2);
 
-        Printer prn = new Printer();
         Console.WriteLine(prn.Print(ref v1, 0).ToString());
         Console.WriteLine(prn.Print(ref v2, 0).ToString());
 
@@ -125,20 +127,20 @@ public class Program
   'type': 'donut',
   'batters': [
     {
-      'id': '1003',
-      'type': 'Blueberry'
-    },
-    {
-      'id': '1002',
-      'type': 'Chocolate'
-    },
-    {
       'id': '1004',
       'type': 'Bad Food'
     },
     {
       'id': '1001',
       'type': 'Regular'
+    },
+    {
+      'id': '1003',
+      'type': 'Blueberry'
+    },
+    {
+      'id': '1002',
+      'type': 'Chocolate'
     }
   ]
 }
@@ -173,10 +175,10 @@ public class Program
         jsonParser.SortPaths(jsn, raw, null);
         v1 = new BrowseNode(ref jsn, raw);
         String check = prn.Print(ref v1, 0).ToString();
-        if (sort[0] != check) Console.WriteLine($"SortPaths error:\n{check}");
+        if (sort[0] != check) Console.WriteLine($"SortPaths 2.1 error:\n{sort[0]}!=\n{check}<-");
         jsonParser.SortPaths(jsn, raw, "id");
         check = prn.Print(ref v1, 0).ToString();
-        if (sort[1] != check) Console.WriteLine($"SortPaths error:\n{check}");
+        if (sort[1] != check) Console.WriteLine($"SortPaths 2.2 error:\n{check}");
         endPos = -1;
 #else
         jsonParser.Parse(raw, ref endPos, out jsn
@@ -203,13 +205,13 @@ public class Program
         );
         v1 = new BrowseNode(ref jsn01, raw);
         v2 = new BrowseNode(ref jsn02, raw);
-        BreadthFirst bf1 = new BreadthFirst(v1);
-        BreadthFirst bf2 = new BreadthFirst(v2);
+        BreadthFirst bf1 = new BreadthFirst(jsn01, raw);
+        BreadthFirst bf2 = new BreadthFirst(jsn02, raw);
         JsonNode nNo2 = null, nNo3 = null, nId1 = null, nId2 = null;
         if (bf2.FindNode("created_at")) // Small TC-like demo
         {
-            P_ByteLnk index = bf2.Current.NodeRawData.doubleOrString, tmp;
-            ByteString chars = bf2.Current.NodeRawData.GetFatData(raw);
+            P_ByteLnk index = bf2.Current.doubleOrString, tmp;
+            ByteString chars = bf2.Current.GetFatData(raw);
             tmp = index;
             tmp.length = 1;
             tmp.pos += chars.Find('2'); // find "2" for value
@@ -267,6 +269,7 @@ public class Program
             bf2.Next();
             bf2.PrependChild(nId2);
         }
+        return; // not working yet
         jsonParser.RemoveTwins(ref v1, ref v2);
         String[] results =
 @"{

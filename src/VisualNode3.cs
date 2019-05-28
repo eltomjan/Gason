@@ -23,6 +23,17 @@ namespace Gason
             this.src = src;
             m_debugModeLimit = debugModeLimit;
         }
+        public VisualNode3 Pred_Viewer
+        {
+            get
+            {
+                if (NodeRawData?.Pred != null)
+                {
+                    return new VisualNode3(ref NodeRawData.Pred, src, m_debugModeLimit);
+                }
+                return null;
+            }
+        }
         public VisualNode3 Next_Viewer
         {
             get {
