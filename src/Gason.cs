@@ -19,6 +19,7 @@ namespace Gason
         JsonNode o;
 #if DEBUGGING
         public VisualNode3 root;
+        public int uniqueNo;
 #endif
         public int pos = -1;
         public bool separator = true;
@@ -33,6 +34,7 @@ namespace Gason
         {
             o = new JsonNode();
 #if DEBUGGING
+            uniqueNo = 0;
             tails = new VisualNode3[JSON_STACK_SIZE];
             LinkedByteString.storage = s;
             keys = new LinkedByteString[JSON_STACK_SIZE];
@@ -80,6 +82,9 @@ namespace Gason
                     strPos++;
                     continue; // white space
                 }
+#if DebugPrint
+                o.startPos = strPos;
+#endif
                 endPos = strPos++;
                 switch (type) // switch (**endptr) {
                 {
@@ -184,6 +189,7 @@ namespace Gason
                             return JsonErrno.UNEXPECTED_CHARACTER; // fail4
 #endif
 #if DEBUGGING
+                        o.uniqueNo = ++uniqueNo;
                         o.ListToValue(JsonTag.JSON_ARRAY, tails[pos]?.NodeRawData);
                         pos--;
 #else
@@ -204,7 +210,11 @@ namespace Gason
                         if (separator && prevType != 10) // '{'
                             return JsonErrno.UNEXPECTED_CHARACTER;
 #endif
+#if DebugPrint
+                        o.endPos = strPos;
+#endif
 #if DEBUGGING
+                        o.uniqueNo = ++uniqueNo;
                         o.ListToValue(JsonTag.JSON_OBJECT, tails[pos]?.NodeRawData); // o=parent, tails[pos]=last, 1st, ...
                         pos--;
 #else
@@ -360,13 +370,21 @@ namespace Gason
                         continue;
 #endif
                     }
+#if DebugPrint
+                    o.endPos = strPos;
+#endif
 #if DEBUGGING
+                    o.uniqueNo = ++uniqueNo;
                     o.InsertAfter(tails[pos]?.NodeRawData, ref keys[pos].idxes); // next2 last & before first
 #else
                     o.InsertAfter(tails[pos] != null ? tails[pos] : null, ref keys[pos]);
 #endif
                 } else {
+#if DebugPrint
+                            o.endPos = strPos;
+#endif
 #if DEBUGGING
+                            o.uniqueNo = ++uniqueNo;
                             o.InsertAfter(tails[pos]?.NodeRawData);
 #else
                             o.InsertAfter(tails[pos]);
@@ -380,7 +398,7 @@ namespace Gason
 #endif
                 o = new JsonNode();
 #if DEBUGGING
-                root.ChangeNode(o);
+                root.ChangeNode(ref o);
 #endif
 
 #if KEY_SPLIT
@@ -412,11 +430,10 @@ namespace Gason
             }
             return JsonErrno.BREAKING_BAD;
         }
-        public void RemoveTwins(ref BrowseNode v1, ref BrowseNode v2)
+        public void RemoveTwins(ref BreadthFirst bf1, ref BreadthFirst bf2)
         {
             Printer prn = new Printer();
-            BreadthFirst bf1 = new BreadthFirst(v1);
-            BreadthFirst bf2 = new BreadthFirst(v2);
+            int debug = 0;
             JsonNode traversal = bf1.Next();
             Boolean removed = false;
             int removeNo = 0;
@@ -436,12 +453,28 @@ namespace Gason
                     if (removed && bf1.Orphan && bf2.Orphan)
                     {
                         removeNo++;
-                        //Console.Write($"1> {prn.Print(ref v1, 0, true).ToString()}\nRemoving:{bf1}\n");
+                        JsonNode same = bf1.Current.Parent;
+                        if(bf1.Current.Parent == bf1.root
+                        || bf1.Current == bf1.root) {
+                            traversal = null;
+                            break;
+                        }
+                        if (debug == 2) {
+                            String log = prn.Print(ref same, bf1.src, 0, true).ToString();
+                            if (log.Length > 200) log = log.Substring(0, 200);
+                            Console.Write($"1> {log}\nRemoving:{bf1.Current.debugView(bf1.src)}\n");
+                        }
+                        if (debug == 1) Console.Write($"1> Removing:{bf1}\n");
                         traversal = bf1.RemoveCurrent();
-                        //Console.Write($"1< {prn.Print(ref v1, 0, true).ToString()}");
-                        //Console.Write($"2> {prn.Print(ref v2, 0, true).ToString()}\nRemoving:{bf2}\n");
+                        same = bf2.Current.Parent;
+                        if (debug == 2) {
+                            String log = prn.Print(ref same, bf2.src, 0, true).ToString();
+                            if (log.Length > 200) log = log.Substring(0, 200);
+                            Console.Write($"1> {log}\nRemoving:{bf2.Current.debugView(bf2.src)}\n");
+                        }
+                        if (debug == 1) Console.Write($"2> Removing:{bf2}\n");
                         bf2.RemoveCurrent();
-                        //Console.Write($"2< {prn.Print(ref v2, 0, true).ToString()}");
+                        if (debug == 2) Console.Write($"2< {prn.Print(ref same, bf2.src, 0, true).ToString()}**\n");
                         if (traversal == null
                         || bf1.Root == null
                         || bf2.Root == null)

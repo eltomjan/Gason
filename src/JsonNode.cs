@@ -6,18 +6,25 @@ using System.Text;
 
 namespace Gason
 {
-    public class JsonNode
+    public partial class JsonNode
     { // 16B
+        public JsonTag Tag = JsonTag.JSON_NULL;
         private JsonNode next; // 4B
+        private JsonNode parent;
+        private JsonNode pred;
+        private JsonNode node;
         protected P_ByteLnk keyIdxes;
+#if DebugPrint
+        public int startPos, endPos;
+#endif
+#if DEBUGGING
+        public int uniqueNo;
+#endif
         public P_ByteLnk KeyIndexesData { get { return keyIdxes; } }
 
         public P_ByteLnk doubleOrString;
-        private JsonNode parent;
-        private JsonNode pred;
         public ref JsonNode Parent { get { return ref parent; } }
         public ref JsonNode Pred { get { return ref pred; } }
-        private JsonNode node;
         public ref JsonNode NextTo {
             get {
                 if (next != null) next.parent = parent;
@@ -48,6 +55,7 @@ namespace Gason
             if (keyIdxes.length == 0) return print ? "" : $"Empty:{keyIdxes.pos},{keyIdxes.length}";
             else return Encoding.UTF8.GetString(src, keyIdxes.pos, keyIdxes.length);
         }
+        public String debugView(Byte[] src) { return $"{Tag} {KeyView(src)}:{ToString(src)}"; }
         public Boolean HasKey  { get { return (keyIdxes.pos != 0) || (keyIdxes.length != 0); } }
         public String Key2str(Byte[] src)
         {
@@ -89,15 +97,15 @@ namespace Gason
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void InsertAfter(JsonNode orig)
-        {
+        { // orig = previous node, 1t, ... / this == last Node
             if (orig == null)
             {
-                pred = next = this;
+                next = this;
                 return;
             }
             next = orig.next; // last -> 1st
-            orig.next = this; // prev -> last
-            this.pred = orig.pred; // before prev <- last
+            orig.next = this; // 1st -> last
+            this.pred = orig; // before prev <- last
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -107,12 +115,12 @@ namespace Gason
             key.length = -1;
             if (orig == null)
             {
-                pred = next = this;
+                next = this;
                 return;
             }
             next = orig.next; // last -> 1st
             orig.next = this; // prev -> last
-            this.pred = orig.pred; // before prev <- last
+            this.pred = orig; // before prev <- last
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -128,9 +136,8 @@ namespace Gason
                 node = head; // attach to parent
                 head.parent = this; // and 
                 doubleOrString.data = 0; // clear parent's value
-            }
+            } else if(tag == JsonTag.JSON_ARRAY) doubleOrString.data = 0; // clear key value
         }
-        public JsonTag Tag = JsonTag.JSON_NULL;
         public ByteString GetFatData(Byte[] src) { return new ByteString(src, doubleOrString); }
         public string ToString(Byte[] src)
         {
@@ -394,41 +401,56 @@ namespace Gason
         }
         public Boolean ReplaceNext(JsonNode newNext)
         {
-            if (NextTo == null) return false;
-            SetNextTo(newNext);
+            if (next == null) return false;
+            next = newNext;
+            if(newNext != null) {
+                newNext.pred = this;
+                newNext.parent = parent;
+            }
             return true;
         }
         public void SkipNext()
         {
-            SetNextTo(NextTo?.NextTo);
+            if (next?.next?.next?.pred != null) next.next.next.pred = next;
+            next.pred = null;
+            next = next?.next;
         }
-        public JsonNode RemoveCurrent()
+        public JsonNode RemoveCurrent(Byte[] src)
         {
-            int arround = 0;
-            if (Parent?.NodeBelow != null) arround  = 1;
-            if (Pred              != null) arround |= 2;
-            if (      NodeBelow   != null) arround |= 4;
-            if (           NextTo != null) arround |= 8;
-
-            //Console.WriteLine($"RemoveCurrent arround {arround}");
-
             JsonNode retVal = null, retVal2 = null;
+            int arround = 0;
+            if (parent       != null) arround  = 1; // ↑
+            if (pred         != null) arround |= 2; // ←
+            if (      node   != null) arround |= 4; // ↓
+            if (        next != null) arround |= 8; // →
+
+            VisualNode3 vn;
+            DebugVisual dv = null; // new DebugVisual(this, arround, src);
+
             switch (arround)
             {
-                case 1:
-                    Parent.node = null;
-                    return Parent.RemoveEmpties(this);
-                case 3: // a -> me                      | Parent / Pred, -, -
-                    retVal = Pred;
-                    retVal.SkipNext(); // Link Pred -> Next(=null)
-                    return retVal; // next @pred (last node in a row)
+                case 1: //                              | Parent / -, -, -
+                    retVal = parent;
+                    retVal2 = parent?.parent;
+                    parent.node = null;
+/*                    retVal = retVal.RemoveEmpties(this, src);
+                    retVal = retVal ?? retVal2;
+                    vn = new VisualNode3(ref retVal, src, 10000);*/
+                    return retVal;
+                case 2: //                              | - / Pred, -, -
+                    retVal = pred;
+                    pred.next = null;
+                    pred = null;
+                    return retVal;
+                case 3: //                              | Parent / Pred, -, -
+                    return Pred2parent(ref dv);
                 case 5: // Orphan, nested obj or array  | Parent / -, Node, -
                     retVal = Parent;
-                    if (retVal?.NodeBelow.NodeBelow == NodeBelow)
+                    if (retVal?.node.node == this)
                         if (retVal.Tag == JsonTag.JSON_ARRAY
                         || retVal.Tag == JsonTag.JSON_OBJECT)
                         {
-                            retVal2 = retVal.RemoveEmpties(NodeBelow); // remove parent 2
+                            retVal2 = retVal.RemoveEmpties(node, src); // remove parent 2
                         }
                     if (retVal?.Parent.NodeBelow != null) retVal = retVal?.Parent;
                     if (retVal2 == null || retVal2.NodeBelow == null) return retVal;
@@ -436,33 +458,34 @@ namespace Gason
                 case 7: // <-> a -> me => <-> a -> null | Parent / Pred, Node, -
                     retVal = Pred;
                     if (!Pred.ReplaceNext(null)) return null; // Link Pred -> Next(=null)
-                    NodeBelow.NodeBelow = null;
+                    node = null;
                     NodeBelow = null;
                     return retVal;
                 case 9: // Parent / - , - , Next
-                    retVal = parent;
-                    parent.node = next;
-                    next.pred = null;
-                    next = null;
-                    return retVal;
+                    return Next2parent(ref dv);
+                case 10: // - / Pred , - , Next
+                    retVal = next;
+                    pred.next = next;
+                    next.pred = pred;
+                    next.parent = parent;
+                    return next;
                 case 11: // Parent / Pred , - , Next
                     retVal = next;
                     pred.next = next;
-                    parent = next;
-                    return retVal.RemoveEmpties(retVal);
+                    next.pred = pred;
+                    next.parent = parent;
+                    return next;
                 case 13: // me -> a                     | Parent / - , Node, Next
-                    retVal = NextTo;
-                    Parent.NodeBelow.NodeBelow = NodeBelow.NextTo;
-                    NodeBelow.SetNextTo(null); // clear me -> a
-                    NodeBelow.NodeBelow = null;
-                    NodeBelow = null; // clear me
+                    retVal = next;
+                    parent.node = next;
+                    next.parent = parent;
+                    node = null; // clear me
                     return retVal; // next @next
                 case 15: // a -> me -> b => a -> b      | Parent, Pred, Node, Next
-                    Pred.SkipNext();
-                    retVal = Pred.NextTo; // new Next (2x)
-                    NodeBelow.SetNextTo(null); // clear me -> b
-                    NodeBelow.NodeBelow = null;
-                    NodeBelow = null; // clear me
+                    pred.next = next;
+                    next.pred = pred;
+                    retVal = next;
+                    node = null; // clear me
                     return retVal; // next @next
                 default:
                     Console.WriteLine($"RemoveCurrent buggy node ({arround}) ?!");
@@ -470,77 +493,96 @@ namespace Gason
             }
             return null; // unreachable
         }
-        public JsonNode RemoveEmpties(JsonNode removed)
+        public JsonNode RemoveEmpties(JsonNode removed, Byte[] src)
         {
-            if (Tag != JsonTag.JSON_ARRAY
-             && Tag != JsonTag.JSON_OBJECT) return this; // only 2 types could be useless
+            if (Tag != JsonTag.JSON_ARRAY && Tag != JsonTag.JSON_OBJECT
+             /*&& !(keyIdxes.data == 0 && doubleOrString.data == 0 && node == null)*/) return this; // only 2 types could be useless
             int arround = 0;
-            if (Parent?.NodeBelow != null) arround  = 1;
-            if (Pred              != null) arround |= 2;
-            if (    NodeBelow     != null)
+            if (parent       != null) arround  = 1; // ↑
+            if (pred         != null) arround |= 2; // ←
+            if (      node   != null)               // ↓
             {
                                            arround |= 4;
-                if (NodeBelow.doubleOrString.data != 0) return this; // if has no value
+                if (doubleOrString.data != 0) return this; // if has no value
             }
-            if (           NextTo != null) arround |= 8;
+            if (        next != null) arround |= 8; // →
 
-            //Console.WriteLine($"RemoveCurrent arround {arround}");
+            VisualNode3 vn;
+            JsonNode retVal = null, retVal2 = null;
+            DebugVisual dv = null; // new DebugVisual(this, arround, src);
 
-            JsonNode retVal = null, retVal2 = null, retVal3 = null;
             switch (arround)
             {
-                case 1:
-                    Parent.node = null;
-                    return Parent.RemoveEmpties(this);
-                case 3: // a -> me                      | Parent / Pred, -, -
+                case 1: //                              | Parent / -, -, -
+                    retVal = parent;
+                    retVal.node = null;
+                    parent = null;
+                    retVal2 = retVal.parent;
+                    if (retVal2 != null) {
+                        retVal = retVal2.RemoveEmpties(retVal, src);
+                        vn = new VisualNode3(ref retVal, src, 10000);
+                        return retVal;
+                    }
+                    return retVal;
+                case 2: //                              | - / Pred, -, -
+                    retVal = pred;
+                    retVal.next = null;
+                    return retVal;
+                case 3: //                              | Parent / Pred, -, -
                     retVal = Pred;
                     retVal.SkipNext(); // Link Pred -> Next(=null)
-                    return retVal.RemoveEmpties(NodeBelow); // next @pred (last node in a row)
+                    return retVal.RemoveEmpties(NodeBelow, src); // next @pred (last node in a row)
                 case 4:
                     NodeBelow = null;
                     return null;
                 case 5: // Orphan, nested obj or array  | Parent / -, Node, -
-                    if (NodeBelow.NodeBelow != removed) return this;
+                    if (node != removed) return this;
                     retVal = Parent;
-                    retVal2 = retVal.RemoveEmpties(NodeBelow); // remove parent 2
-                    NodeBelow = null; // clear me
-                    if (retVal2 != null) return retVal2;
-                    if (retVal?.Parent != null) return retVal?.Parent;
-                    return retVal;
+                    retVal2 = retVal.RemoveEmpties(this, src); // remove parent 2
+                    parent.node = null;
+                    parent = null;
+                    node.parent = null;
+                    node = null; // clear me
+                    if (retVal2 != null) {
+                        vn = new VisualNode3(ref retVal2, src, 10000);
+                        return retVal2;
+                    }
+                    return retVal?.parent ?? retVal;
                 case 7: // <-> a -> me => <-> a -> null | Parent / Pred, Node, -
-                    if (NodeBelow.NodeBelow != removed) return this;
+                    if (node != removed) return this;
                     retVal = Pred;
                     if (!Pred.ReplaceNext(null)) return null; // Link Pred -> Next(=null)
-                    NodeBelow.NodeBelow = null;
-                    NodeBelow = null;
+                    node = null;
                     return retVal;
                 case 9: // Parent / - , - , Next
                     retVal = parent;
                     parent.node = next;
                     next.pred = null;
                     next = null;
+                    retVal = parent.RemoveEmpties(parent.node, src);
                     return retVal;
                 case 11: // Parent / Pred , - , Next
                     retVal = next;
                     pred.next = next;
                     parent = next;
-                    return retVal.RemoveEmpties(retVal);
+                    return retVal.RemoveEmpties(retVal, src);
                 case 13: // me -> a                     | Parent / - , Node, Next
-                    if (NodeBelow.NodeBelow != removed) return this;
-                    retVal = NextTo;
-                    retVal2 = Parent;
-                    Parent.NodeBelow.NodeBelow = NodeBelow.NextTo;
-                    NodeBelow.SetNextTo(null); // clear me -> a
-                    NodeBelow = null; // clear me
-                    if (retVal2 == retVal3) return retVal2; // next @next
-                    return retVal3 ?? retVal2;
+                    if (node != removed) return this;
+                    retVal = DeleteNode2next(ref dv);
+                    vn = new VisualNode3(ref retVal, src, 10000);
+                    return retVal;
                 case 15: // a -> me -> b => a -> b      | Parent, Pred, Node, Next
-                    Pred.SkipNext();
-                    retVal = Pred.NextTo; // new Next (2x)
-                    NodeBelow.SetNextTo(null); // clear me -> b
-                    NodeBelow.NodeBelow = null;
-                    NodeBelow = null; // clear me
-                    return retVal; // next @next
+                    pred.next = next;
+                    next.pred = pred;
+                    retVal = parent;
+                    pred = null;
+                    node = null; // clear me
+                    next = null;
+                    retVal2 = retVal.RemoveEmpties(this, src); // next @next
+                    parent = null;
+                    return retVal2;
+                case 0:
+                    return null; // ok nothing around
                 default:
                     Console.WriteLine($"RemoveEmpties buggy node ({arround}) ?!");
                     break;

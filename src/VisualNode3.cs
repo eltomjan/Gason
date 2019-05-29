@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Gason
 {
-    public class VisualNode3
+    public class VisualNode3 : JsonNode
     {
         public JsonNode NodeRawData;
         readonly Byte[] src;
@@ -17,11 +17,22 @@ namespace Gason
 #pragma warning restore IDE1006 // Naming Styles
         private Stack<JsonNode> levelStack = new Stack<JsonNode>();
         private List<int> nos;
-        public VisualNode3(ref JsonNode my, Byte[] src, int debugModeLimit)
+        public VisualNode3(ref JsonNode my, Byte[] src, int debugModeLimit) //: base(ref my)
         {
             NodeRawData = my;
             this.src = src;
             m_debugModeLimit = debugModeLimit;
+        }
+        public VisualNode3 Parent_Viewer
+        {
+            get
+            {
+                if (NodeRawData?.Parent != null)
+                {
+                    return new VisualNode3(ref NodeRawData.Parent, src, m_debugModeLimit);
+                }
+                return null;
+            }
         }
         public VisualNode3 Pred_Viewer
         {
@@ -62,7 +73,7 @@ namespace Gason
             }
         }
         public String Value_Viewer { get { return new ByteString(src, NodeRawData.doubleOrString).ToString(); } }
-        public void ChangeNode(JsonNode o)
+        public void ChangeNode(ref JsonNode o)
         {
             NodeRawData = o;
         }

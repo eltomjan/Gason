@@ -10,10 +10,10 @@ namespace Gason
         private int indent;
         int shift_Width;
         public Printer() {}
-        public StringBuilder Print(ref JsonNode start, Byte[] src, int indent)
+        public StringBuilder Print(ref JsonNode start, Byte[] src, int indent, Boolean debugInfo = false)
         {
             BrowseNode root = new BrowseNode(ref start, src);
-            return Print(ref root, indent);
+            return Print(ref root, indent, debugInfo);
         }
         public StringBuilder Print(ref BrowseNode current, int _indent, Boolean debugInfo = false)
         {
@@ -38,6 +38,9 @@ namespace Gason
                     if (around.Parent != null) printing.Append('^');
                     if (around.NodeBelow != null) printing.Append(@"\/");
                     if (around.NextTo != null) printing.Append('>');
+#if DEBUGGING
+                    printing.Append($" {around.uniqueNo}");
+#endif
                 }
                 if (startTag == JsonTag.JSON_OBJECT || startTag == JsonTag.JSON_ARRAY) {
                     String open = "";

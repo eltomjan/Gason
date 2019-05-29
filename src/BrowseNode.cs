@@ -30,7 +30,7 @@ namespace Gason
                 if (JsonTag.JSON_OBJECT < NodeRawData.Tag) {
                     return specialNames[NodeRawData.Tag - JsonTag.JSON_TRUE];
                 }
-                return new ByteString(src, NodeRawData.doubleOrString).ToString();
+                return NodeRawData.ToString(src);
             }
         }
         public BrowseNode(ref JsonNode my, Byte[] src)

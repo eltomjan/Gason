@@ -104,7 +104,7 @@ namespace Gason
                     do {
 #if DEBUGGING
                         o = levelStack.Pop().NodeRawData;
-                        oV.ChangeNode(o);
+                        oV.ChangeNode(ref o);
 #else
                         o = levelStack.Pop();
 #endif

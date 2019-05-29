@@ -90,9 +90,10 @@ namespace Gason
         }
         public bool NextAs(Byte[] src1, BreadthFirst second, Byte[] src2)
         {
-            if (second.current.Parent != null) second.current = second.current.Parent.NodeBelow;
-            else { // move left
-                while (second.current.Pred != null) second.current = second.current.Pred;
+            if (second.current.Parent != null && second.current.Parent.NodeBelow != null) {
+                second.current = second.current.Parent.NodeBelow;
+            } else { // move left
+                while (second.Pred()) ;
             }
             while (Level < second.Level && second.Parent()); // 2nd up if too deep
             for(;;) {
@@ -106,20 +107,26 @@ namespace Gason
                     second.Current = ndNode; // switch 2 same node
                     return true;
                 }
+                JsonNode startAt = second.current;
                 while (Level > second.Level) {
                     if (second.Level < 0)
                     {
                         second.Current = second.Root;
                         if (second.Current.NodeBelow == null) return false;
                     }
-                    else second.Next(); // adjust levels
+                    else {
+                        second.Next(); // adjust levels
+                        //if (second.Level < 0) second.Current = second.root;
+                    }
+                    if (second.current == null) return false;
+                    if (second.current == startAt) return false;
                 }
                 if (Level != second.Level) return false;
             }
         }
         public JsonNode RemoveCurrent()
         {
-            Current = current.RemoveCurrent(); // request remove and get next one
+            Current = current.RemoveCurrent(src); // request remove and get next one
             return current;
         }
         public Boolean FindNode(String name)
@@ -145,9 +152,11 @@ namespace Gason
         public Boolean PrependChild(JsonNode child)
         {
             if (current?.NodeBelow == null) return false;
-            child.NextTo = current.NodeBelow;
-            current.NodeBelow = child;
+            child.NextTo = current.NodeBelow; // child -> 1st child of current
+            current.NodeBelow.Pred = child; // child <- 1st child of current
+            current.NodeBelow = child; // current \/ child
+            child.Parent = current.Parent; // child /\ current's Parent
             return true;
-        }
+}
     }
 }

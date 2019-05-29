@@ -87,6 +87,7 @@ public class Program
 #endif
         );
         Printer prn = new Printer();
+        BreadthFirst bf1 = new BreadthFirst(jsn1, raw);
         BrowseNode v1 = new BrowseNode(ref jsn1, raw);
 
         raw = Encoding.UTF8.GetBytes(jsons[2]);
@@ -95,11 +96,12 @@ public class Program
             , new ByteString[] { }, 0, 0, 0
 #endif
         );
-        jsonParser.SortPaths(jsn2, raw, null);
+        jsonParser.SortPaths(jsn2, raw, "id");
         BrowseNode v2 = new BrowseNode(ref jsn2, raw);
 
         //Console.Read();
-        jsonParser.RemoveTwins(ref v1, ref v2);
+        BreadthFirst bf2 = new BreadthFirst(jsn2, raw);
+        jsonParser.RemoveTwins(ref bf1, ref bf2);
 
         Console.WriteLine(prn.Print(ref v1, 0).ToString());
         Console.WriteLine(prn.Print(ref v2, 0).ToString());
@@ -205,8 +207,8 @@ public class Program
         );
         v1 = new BrowseNode(ref jsn01, raw);
         v2 = new BrowseNode(ref jsn02, raw);
-        BreadthFirst bf1 = new BreadthFirst(jsn01, raw);
-        BreadthFirst bf2 = new BreadthFirst(jsn02, raw);
+        bf1 = new BreadthFirst(jsn01, raw);
+        bf2 = new BreadthFirst(jsn02, raw);
         JsonNode nNo2 = null, nNo3 = null, nId1 = null, nId2 = null;
         if (bf2.FindNode("created_at")) // Small TC-like demo
         {
@@ -269,13 +271,80 @@ public class Program
             bf2.Next();
             bf2.PrependChild(nId2);
         }
-        return; // not working yet
-        jsonParser.RemoveTwins(ref v1, ref v2);
+        jsonParser.RemoveTwins(ref bf1, ref bf2);
         String[] results =
 @"{
   'statuses': [
     {
-      'created_at': 'Sun Aug 31 00:28:56 +0000 2014',
+      'entities': {
+        'user_mentions': [
+          {
+            'indices': []
+          }
+        ]
+      }
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
       'entities': {
         'hashtags': [
           {
@@ -284,7 +353,8 @@ public class Program
         ]
       }
     }
-  ]
+  ],
+  'search_metadata': {}
 }
 |{
   'statuses': [
@@ -300,8 +370,67 @@ public class Program
         ]
       }
     },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
     {
-      'created_at': 'Sun Aug 31 00:28:56 +0000 2014',
       'entities': {
         'hashtags': [
           {
@@ -310,7 +439,8 @@ public class Program
         ]
       }
     }
-  ]
+  ],
+  'search_metadata': {}
 }
 ".Replace("'", "\"").Replace("\r\n", "\n").Split('|');
         if (v1.NodeRawData == null) Console.WriteLine("Bug - 1st JSON empty");
