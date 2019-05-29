@@ -157,6 +157,6 @@ namespace Gason
             current.NodeBelow = child; // current \/ child
             child.Parent = current.Parent; // child /\ current's Parent
             return true;
-}
+        }
     }
 }
