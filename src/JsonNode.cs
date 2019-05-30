@@ -424,7 +424,6 @@ namespace Gason
             if (      node   != null) arround |= 4; // ↓
             if (        next != null) arround |= 8; // →
 
-            VisualNode3 vn;
             DebugVisual dv = null; // new DebugVisual(this, arround, src);
 
             switch (arround)
@@ -534,7 +533,7 @@ namespace Gason
                     pred.next = null;
                     parent = null;
                     pred = null;
-                    dv.update(retVal, -3);
+                    dv?.update(retVal, -3);
                     return retVal; // next @pred (last node in a row)
                 case 4:
                     NodeBelow = null;
@@ -567,6 +566,7 @@ namespace Gason
                     return retVal;
                 case 11: // Parent / Pred , - , Next
                     retVal = next;
+                    next.parent = parent;
                     pred.next = next;
                     next.pred = pred;
                     dv?.update(this);
