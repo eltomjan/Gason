@@ -13,13 +13,7 @@ namespace Gason
             get { return current; }
             set {
                 current = value;
-                Level = -1;
-                if (value == null) return;
-                JsonNode cnt = value;
-                while (cnt != null) {
-                    Level++;
-                    cnt = cnt?.Parent;
-                }
+                UpdateLevel();
             }
         }
         private static readonly String[] specialNames = "true,false,null".Split(',');
@@ -157,6 +151,19 @@ namespace Gason
             current.NodeBelow = child; // current \/ child
             child.Parent = current.Parent; // child /\ current's Parent
             return true;
+        }
+
+        internal void UpdateLevel()
+        {
+            JsonNode value = current;
+            Level = -1;
+            if (value == null) return;
+            JsonNode cnt = value;
+            while (cnt != null)
+            {
+                Level++;
+                cnt = cnt?.Parent;
+            }
         }
     }
 }

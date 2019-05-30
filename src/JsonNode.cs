@@ -433,9 +433,10 @@ namespace Gason
                     retVal = parent;
                     retVal2 = parent?.parent;
                     parent.node = null;
-/*                    retVal = retVal.RemoveEmpties(this, src);
+                    parent = null;
+                    retVal = retVal.RemoveEmpties(this, src);
                     retVal = retVal ?? retVal2;
-                    vn = new VisualNode3(ref retVal, src, 10000);*/
+                    dv?.update(retVal, -1);
                     return retVal;
                 case 2: //                              | - / Pred, -, -
                     retVal = pred;
@@ -502,7 +503,7 @@ namespace Gason
             if (pred         != null) arround |= 2; // ←
             if (      node   != null)               // ↓
             {
-                                           arround |= 4;
+                                      arround |= 4;
                 if (doubleOrString.data != 0) return this; // if has no value
             }
             if (        next != null) arround |= 8; // →
@@ -529,9 +530,12 @@ namespace Gason
                     retVal.next = null;
                     return retVal;
                 case 3: //                              | Parent / Pred, -, -
-                    retVal = Pred;
-                    retVal.SkipNext(); // Link Pred -> Next(=null)
-                    return retVal.RemoveEmpties(NodeBelow, src); // next @pred (last node in a row)
+                    retVal = parent;
+                    pred.next = null;
+                    parent = null;
+                    pred = null;
+                    dv.update(retVal, -3);
+                    return retVal; // next @pred (last node in a row)
                 case 4:
                     NodeBelow = null;
                     return null;
@@ -564,8 +568,15 @@ namespace Gason
                 case 11: // Parent / Pred , - , Next
                     retVal = next;
                     pred.next = next;
-                    parent = next;
-                    return retVal.RemoveEmpties(retVal, src);
+                    next.pred = pred;
+                    dv?.update(this);
+                    next = null;
+                    pred = null;
+                    retVal2 = parent;
+                    parent = null;
+                    dv?.update(retVal, -11);
+                    //retVal2.RemoveEmpties(this, src);
+                    return retVal;
                 case 13: // me -> a                     | Parent / - , Node, Next
                     if (node != removed) return this;
                     retVal = DeleteNode2next(ref dv);

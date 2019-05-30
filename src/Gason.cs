@@ -454,11 +454,6 @@ namespace Gason
                     {
                         removeNo++;
                         JsonNode same = bf1.Current.Parent;
-                        if(bf1.Current.Parent == bf1.root
-                        || bf1.Current == bf1.root) {
-                            traversal = null;
-                            break;
-                        }
                         if (debug == 2) {
                             String log = prn.Print(ref same, bf1.src, 0, true).ToString();
                             if (log.Length > 200) log = log.Substring(0, 200);
@@ -475,6 +470,8 @@ namespace Gason
                         if (debug == 1) Console.Write($"2> Removing:{bf2}\n");
                         bf2.RemoveCurrent();
                         if (debug == 2) Console.Write($"2< {prn.Print(ref same, bf2.src, 0, true).ToString()}**\n");
+                        bf1.UpdateLevel();
+                        bf2.UpdateLevel();
                         if (traversal == null
                         || bf1.Root == null
                         || bf2.Root == null)
