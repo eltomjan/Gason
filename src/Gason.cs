@@ -474,7 +474,8 @@ namespace Gason
                         bf2.UpdateLevel();
                         if (traversal == null
                         || bf1.Root == null
-                        || bf2.Root == null)
+                        || bf2.Root == null
+                        || (bf1.Level == 0 && bf1.Current.NodeBelow == null))
                         {
                             traversal = null;
                             break;

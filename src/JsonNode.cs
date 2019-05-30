@@ -437,56 +437,57 @@ namespace Gason
                     retVal = retVal ?? retVal2;
                     dv?.update(retVal, -1);
                     return retVal;
-                case 2: //                              | - / Pred, -, -
-                    retVal = pred;
-                    pred.next = null;
-                    pred = null;
-                    return retVal;
+                //case 2: //                              | - / Pred, -, -
+                //    retVal = pred;
+                //    pred.next = null;
+                //    pred = null;
+                //    return retVal;
                 case 3: //                              | Parent / Pred, -, -
                     return Pred2parent(ref dv);
-                case 5: // Orphan, nested obj or array  | Parent / -, Node, -
-                    retVal = Parent;
-                    if (retVal?.node.node == this)
-                        if (retVal.Tag == JsonTag.JSON_ARRAY
-                        || retVal.Tag == JsonTag.JSON_OBJECT)
-                        {
-                            retVal2 = retVal.RemoveEmpties(node, src); // remove parent 2
-                        }
-                    if (retVal?.Parent.NodeBelow != null) retVal = retVal?.Parent;
-                    if (retVal2 == null || retVal2.NodeBelow == null) return retVal;
-                    return retVal2;
-                case 7: // <-> a -> me => <-> a -> null | Parent / Pred, Node, -
-                    retVal = Pred;
-                    if (!Pred.ReplaceNext(null)) return null; // Link Pred -> Next(=null)
-                    node = null;
-                    NodeBelow = null;
-                    return retVal;
+                //case 5: // Orphan, nested obj or array  | Parent / -, Node, -
+                //    retVal = Parent;
+                //    if (retVal?.node.node == this)
+                //        if (retVal.Tag == JsonTag.JSON_ARRAY
+                //        || retVal.Tag == JsonTag.JSON_OBJECT)
+                //        {
+                //            retVal2 = retVal.RemoveEmpties(node, src); // remove parent 2
+                //        }
+                //    if (retVal?.Parent.NodeBelow != null) retVal = retVal?.Parent;
+                //    if (retVal2 == null || retVal2.NodeBelow == null) return retVal;
+                //    return retVal2;
+                //case 7: // <-> a -> me => <-> a -> null | Parent / Pred, Node, -
+                //    retVal = Pred;
+                //    if (!Pred.ReplaceNext(null)) return null; // Link Pred -> Next(=null)
+                //    node = null;
+                //    NodeBelow = null;
+                //    return retVal;
                 case 9: // Parent / - , - , Next
-                    return Next2parent(ref dv);
-                case 10: // - / Pred , - , Next
-                    retVal = next;
-                    pred.next = next;
-                    next.pred = pred;
-                    next.parent = parent;
-                    return next;
+                    return Next2next(ref dv);
+                //case 10: // - / Pred , - , Next
+                //    retVal = next;
+                //    pred.next = next;
+                //    next.pred = pred;
+                //    next.parent = parent;
+                //    return next;
                 case 11: // Parent / Pred , - , Next
                     retVal = next;
                     pred.next = next;
                     next.pred = pred;
-                    next.parent = parent;
+                    next.parent = parent; // null not set by parser
+                    dv?.update(parent, -11);
                     return next;
-                case 13: // me -> a                     | Parent / - , Node, Next
-                    retVal = next;
-                    parent.node = next;
-                    next.parent = parent;
-                    node = null; // clear me
-                    return retVal; // next @next
-                case 15: // a -> me -> b => a -> b      | Parent, Pred, Node, Next
-                    pred.next = next;
-                    next.pred = pred;
-                    retVal = next;
-                    node = null; // clear me
-                    return retVal; // next @next
+                //case 13: // me -> a                     | Parent / - , Node, Next
+                //    retVal = next;
+                //    parent.node = next;
+                //    next.parent = parent;
+                //    node = null; // clear me
+                //    return retVal; // next @next
+                //case 15: // a -> me -> b => a -> b      | Parent, Pred, Node, Next
+                //    pred.next = next;
+                //    next.pred = pred;
+                //    retVal = next;
+                //    node = null; // clear me
+                //    return retVal; // next @next
                 default:
                     Console.WriteLine($"RemoveCurrent buggy node ({arround}) ?!");
                     break;
@@ -507,7 +508,6 @@ namespace Gason
             }
             if (        next != null) arround |= 8; // →
 
-            VisualNode3 vn;
             JsonNode retVal = null, retVal2 = null;
             DebugVisual dv = null; // new DebugVisual(this, arround, src);
 
@@ -515,19 +515,20 @@ namespace Gason
             {
                 case 1: //                              | Parent / -, -, -
                     retVal = parent;
-                    retVal.node = null;
                     parent = null;
                     retVal2 = retVal.parent;
-                    if (retVal2 != null) {
+                    if (retVal2 != null && retVal2?.parent != null) { // not 4 root
                         retVal = retVal2.RemoveEmpties(retVal, src);
-                        vn = new VisualNode3(ref retVal, src, 10000);
+                        retVal.node = null;
+                        dv?.update(retVal);
                         return retVal;
                     }
+                    retVal.node = null;
                     return retVal;
-                case 2: //                              | - / Pred, -, -
-                    retVal = pred;
-                    retVal.next = null;
-                    return retVal;
+                //case 2: //                              | - / Pred, -, -
+                //    retVal = pred;
+                //    retVal.next = null;
+                //    return retVal;
                 case 3: //                              | Parent / Pred, -, -
                     retVal = parent;
                     pred.next = null;
@@ -535,40 +536,49 @@ namespace Gason
                     pred = null;
                     dv?.update(retVal, -3);
                     return retVal; // next @pred (last node in a row)
-                case 4:
-                    NodeBelow = null;
-                    return null;
+                //case 4:
+                //    NodeBelow = null;
+                //    return null;
                 case 5: // Orphan, nested obj or array  | Parent / -, Node, -
                     if (node != removed) return this;
                     retVal = Parent;
                     retVal2 = retVal.RemoveEmpties(this, src); // remove parent 2
-                    parent.node = null;
+                    retVal.node = null;
                     parent = null;
                     node.parent = null;
                     node = null; // clear me
                     if (retVal2 != null) {
-                        vn = new VisualNode3(ref retVal2, src, 10000);
+                        dv?.update(retVal2);
                         return retVal2;
                     }
                     return retVal?.parent ?? retVal;
                 case 7: // <-> a -> me => <-> a -> null | Parent / Pred, Node, -
-                    if (node != removed) return this;
+                    if (this != removed.parent) return this;
                     retVal = Pred;
-                    if (!Pred.ReplaceNext(null)) return null; // Link Pred -> Next(=null)
-                    node = null;
-                    return retVal;
+                    pred.next = null;
+                    pred = null;
+                    //retVal2 = retVal.RemoveEmpties(this, src);
+                    node = null; // clear me
+                    parent = null;
+                    dv?.update(retVal2);
+                    return retVal2;
                 case 9: // Parent / - , - , Next
-                    retVal = parent;
+                    retVal = next;
                     parent.node = next;
                     next.pred = null;
+                    next.parent = parent; // null not set by parser
+                    //retVal2 = parent;
+                    parent = null;
                     next = null;
-                    retVal = parent.RemoveEmpties(parent.node, src);
+                    //retVal = retVal2.RemoveEmpties(retVal, src);
+                    dv?.update(retVal, -9);
                     return retVal;
                 case 11: // Parent / Pred , - , Next
                     retVal = next;
                     next.parent = parent;
                     pred.next = next;
                     next.pred = pred;
+                    next.parent = parent; // null not set by parser
                     dv?.update(this);
                     next = null;
                     pred = null;
@@ -580,20 +590,22 @@ namespace Gason
                 case 13: // me -> a                     | Parent / - , Node, Next
                     if (node != removed) return this;
                     retVal = DeleteNode2next(ref dv);
-                    vn = new VisualNode3(ref retVal, src, 10000);
+                    dv?.update(retVal);
                     return retVal;
                 case 15: // a -> me -> b => a -> b      | Parent, Pred, Node, Next
+                    if (node != removed) return this;
+                    retVal = next;
                     pred.next = next;
                     next.pred = pred;
-                    retVal = parent;
+                    next.parent = parent; // null not set by parser
                     pred = null;
                     node = null; // clear me
                     next = null;
-                    retVal2 = retVal.RemoveEmpties(this, src); // next @next
                     parent = null;
-                    return retVal2;
-                case 0:
-                    return null; // ok nothing around
+                    dv?.update(retVal);
+                    return retVal;
+                //case 0:
+                //    return null; // ok nothing around
                 default:
                     Console.WriteLine($"RemoveEmpties buggy node ({arround}) ?!");
                     break;

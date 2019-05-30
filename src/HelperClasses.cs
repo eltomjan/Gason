@@ -4,7 +4,7 @@ namespace Gason
 {
     public partial class JsonNode
     {
-        public JsonNode Next2parent(ref DebugVisual dv)
+        public JsonNode Next2next(ref DebugVisual dv)
         { // 9 Parent / - , - , Next
             JsonNode retVal = next;
             parent.node = next;
@@ -33,7 +33,7 @@ namespace Gason
             JsonNode retVal = next, retVal2 = parent;
             retVal.pred = null;
             parent.node = next;
-            next.parent = parent;
+            next.parent = parent; // null not set by parser
             parent = null;
             dv?.update(this, -1);
             next = null;

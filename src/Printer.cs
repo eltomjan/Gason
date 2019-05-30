@@ -39,7 +39,7 @@ namespace Gason
                     if (around.NodeBelow != null) printing.Append(@"\/");
                     if (around.NextTo != null) printing.Append('>');
 #if DEBUGGING
-                    printing.Append($" {around.uniqueNo}");
+                    printing.Append($" {around.uniqueNo}/");
 #endif
                 }
                 if (startTag == JsonTag.JSON_OBJECT || startTag == JsonTag.JSON_ARRAY) {
