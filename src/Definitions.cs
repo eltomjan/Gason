@@ -30,6 +30,7 @@ namespace Gason
     public class SearchTables
     { // 8B - double or U64
         public static Byte[] valTypes = new byte[256] { // used #: 1-8, 10-15
+          //0 1 2 3  4 5 6 7  8 9 A B  C D E F
             0,0,0,0, 0,0,0,0, 0,1,1,0, 0,1,0,0, // 0-15
             0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1, // 16-31
           //  ! " #  $ % & '  ( ) * +   , - . /

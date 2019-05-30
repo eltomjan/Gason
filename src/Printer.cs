@@ -25,7 +25,7 @@ namespace Gason
 
             BrowseNode startNode = current;
             String space, newLine;
-            if (indent > -1) { space = " "; newLine = "\n"; }
+            if (indent > -1) { space = " "; newLine = "\r\n"; }
             else { space = ""; newLine = ""; }
             JsonTag startTag;
             do

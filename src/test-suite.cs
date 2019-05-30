@@ -1,4 +1,4 @@
-using Gason;
+﻿using Gason;
 using System;
 using System.IO;
 using System.Text;
@@ -217,11 +217,76 @@ public class Tests
       Pass(new Regex(@"[']").Replace("{ 'a':'Alpha','b':true,'c':12345,'d':[true,[false,[-123456789,null],3.9676,['Something else.',false],null]],'e'" // 14.
             + ":{'zero':null,'one':1,'two':2,'three':[3],'four':[0,1,2,3,4]},'f':null,'h':{'a':{'b':{'c':{'d':{'e':{'f':{'g':null}}}}}}},'i':[[[[[[[null]]]]]]]}", "\""));
 
-    if (failed > 0)
-        Console.WriteLine($"{failed}/{parsed} TESTS FAILED\n");
-    else
-        Console.WriteLine("ALL TESTS PASSED");
+        if (failed > 0)
+            Console.WriteLine($"{failed}/{parsed} TESTS FAILED\n");
+        else
+            Console.WriteLine("ALL TESTS PASSED");
 
-    return 0;
-}
+        return 0;
+    }
+    public static void ModifyTwitter(ref BreadthFirst bf1, ref BreadthFirst bf2, Byte[] raw)
+    {
+        JsonNode nNo2 = null, nNo3 = null, nId1 = null, nId2 = null;
+        if (bf2.FindNode("created_at")) // Small TC-like demo
+        {
+            P_ByteLnk index = bf2.Current.doubleOrString, tmp;
+            ByteString chars = bf2.Current.GetFatData(raw);
+            tmp = index;
+            tmp.length = 1;
+            tmp.pos += chars.Find('2'); // find "2" for value
+            nNo2 = new JsonNode
+            {
+                Tag = JsonTag.JSON_STRING,
+                doubleOrString = tmp
+            };
+            tmp.pos = index.pos + chars.Find('3'); // find "3" for value
+            nNo3 = new JsonNode
+            {
+                Tag = JsonTag.JSON_STRING,
+                doubleOrString = tmp
+            };
+            tmp.pos = index.pos;
+            tmp.length = 3; // Sun
+            nId1 = new JsonNode
+            {
+                Tag = JsonTag.JSON_STRING,
+                doubleOrString = tmp
+            };
+            tmp.pos += 4; // Aug
+            nId2 = new JsonNode
+            {
+                Tag = JsonTag.JSON_STRING,
+                doubleOrString = tmp
+            };
+        }
+        if (bf1.FindNode("metadata")
+        && bf1.Parent()
+        && bf1.NextNth(99)
+        && bf1.FindNode("user")
+        && bf1.FindNode("hashtags"))
+        {
+            bf1.Next();
+            bf1.PrependChild(nId1);
+        }
+        bf1.Current = bf1.Root;
+        if (bf2.FindNode("metadata")
+        && bf2.Parent()
+        && bf2.NextNth(37)
+        && bf2.FindNode("retweet_count")
+        && bf2.FindNode("screen_name")
+        && bf2.FindNode("indices"))
+        {
+            bf2.PrependChild(nNo3);
+            bf2.PrependChild(nNo2);
+        }
+        if (bf2.FindNode("metadata")
+        && bf2.Parent()
+        && bf2.NextNth(60)
+        && bf2.FindNode("user")
+        && bf2.FindNode("hashtags"))
+        {
+            bf2.Next();
+            bf2.PrependChild(nId2);
+        }
+    }
 }
