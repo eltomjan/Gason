@@ -238,12 +238,18 @@ public class Tests
             {
                 Tag = JsonTag.JSON_STRING,
                 doubleOrString = tmp
+#if DEBUGGING
+                ,uniqueNo = 16228
+#endif
             };
             tmp.pos = index.pos + chars.Find('3'); // find "3" for value
             nNo3 = new JsonNode
             {
                 Tag = JsonTag.JSON_STRING,
                 doubleOrString = tmp
+#if DEBUGGING
+                ,uniqueNo = 16229
+#endif
             };
             tmp.pos = index.pos;
             tmp.length = 3; // Sun
@@ -251,12 +257,18 @@ public class Tests
             {
                 Tag = JsonTag.JSON_STRING,
                 doubleOrString = tmp
+#if DEBUGGING
+                ,uniqueNo = 16230
+#endif
             };
             tmp.pos += 4; // Aug
             nId2 = new JsonNode
             {
                 Tag = JsonTag.JSON_STRING,
                 doubleOrString = tmp
+#if DEBUGGING
+                ,uniqueNo = 16231
+#endif
             };
         }
         if (bf1.FindNode("metadata")
@@ -266,7 +278,7 @@ public class Tests
         && bf1.FindNode("hashtags"))
         {
             bf1.Next();
-            bf1.PrependChild(nId1);
+            bf1.PrependChild(nId1); // Invalid in JSON text, but possible in it's object representation
         }
         bf1.Current = bf1.Root;
         if (bf2.FindNode("metadata")
@@ -286,7 +298,7 @@ public class Tests
         && bf2.FindNode("hashtags"))
         {
             bf2.Next();
-            bf2.PrependChild(nId2);
+            bf2.PrependChild(nId2); // Invalid in JSON
         }
     }
 }

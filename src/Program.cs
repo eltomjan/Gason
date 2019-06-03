@@ -65,6 +65,7 @@ public class Program
         else Console.WriteLine("SortPaths 2.2 OK");
         endPos = -1;
 #else
+        Console.WriteLine("1st 2 rows of betters only:");
         jsonParser.Parse(raw, ref endPos, out jsn
             , keys, 2, endPos, 2
             ); // and now following 2
@@ -94,12 +95,12 @@ public class Program
         bf2 = new BreadthFirst(jsn02, raw);
         Tests.ModifyTwitter(ref bf1, ref bf2, raw);
         jsonParser.RemoveTwins(ref bf1, ref bf2);
-        if (v1.NodeRawData == null) Console.WriteLine("Bug - 1st JSON empty");
-        else if (Strings.Twitter1 == prn.Print(ref v1, 0).ToString()) Console.WriteLine($"Twitter check 1/2 OK - 2nd file has expected content:");
-        else Console.WriteLine($"Bug demo print result 1/2 differs.\n{prn.Print(ref v1, 0).ToString()}");
-        if (v2.NodeRawData == null) Console.WriteLine("Bug - 2nd JSON empty");
-        else if (Strings.Twitter2 == prn.Print(ref v2, 0).ToString()) Console.WriteLine($"Twitter check 2/2 OK - 2nd file has expected content:");
-        else Console.WriteLine($"Bug demo print result 2/2 differs.\n{prn.Print(ref v2, 0).ToString()}");
+        if (v1.NodeRawData == null) Console.WriteLine("Bug - 1st modified Twitter JSON empty");
+        else if (Strings.Twitter1 == prn.Print(ref v1, 0).ToString()) Console.WriteLine($"Twitter check 1/2 OK - 1st variant has expected content:");
+        else Console.WriteLine($"Twiter RemoveTwins result 1/2 differs:\n{prn.Print(ref v1, 0).ToString()}");
+        if (v2.NodeRawData == null) Console.WriteLine("Bug - 2nd modified Twitter JSON empty");
+        else if (Strings.Twitter2 == prn.Print(ref v2, 0).ToString()) Console.WriteLine($"Twitter check 2/2 OK - 2nd variant has expected content:");
+        else Console.WriteLine($"Twiter RemoveTwins result 2/2 differs:\n{prn.Print(ref v2, 0).ToString()}");
 
         raw = File.ReadAllBytes(@"citylots.json");
         Benchmark b = new Benchmark(raw);
