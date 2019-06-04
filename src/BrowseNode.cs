@@ -8,6 +8,7 @@ namespace Gason
         public JsonNode NodeRawData;
         public readonly Byte[] src;
         public int Level_Viewer { get; protected set; }
+#if DoubleLinked
         public BrowseNode Parent_Viewer {
             get {
                 if (NodeRawData.Parent == null) return null;
@@ -20,6 +21,7 @@ namespace Gason
                 return new BrowseNode(ref NodeRawData.Pred, src) { Level_Viewer = this.Level_Viewer };
             }
         }
+#endif
         public JsonTag Tag_Viewer { get { return NodeRawData.Tag; } }
         public Boolean HasKey { get { if (null != NodeRawData) return NodeRawData.HasKey; else return false; } }
         public String Key_Viewer { get { return NodeRawData.KeyView(src); } }
@@ -47,7 +49,9 @@ namespace Gason
                     BrowseNode retVal = new BrowseNode(ref NodeRawData.NextTo, src) {
                         Level_Viewer = this.Level_Viewer
                     };
+#if DoubleLinked
                     retVal.NodeRawData.Parent = NodeRawData.NextTo.Parent ?? NodeRawData.Parent;
+#endif
                     return retVal;
                 }
                 return null;
@@ -64,6 +68,7 @@ namespace Gason
                 } else return null;
             }
         }
+#if DoubleLinked
         public String Path_Viewer { get { return Path(); } }
         public String Path(Boolean sortable = false)
         {
@@ -170,5 +175,6 @@ namespace Gason
 
             return true;
         }
+#endif
     }
 }

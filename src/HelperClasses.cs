@@ -4,6 +4,7 @@ namespace Gason
 {
     public partial class JsonNode
     {
+#if DoubleLinked
         public JsonNode Next2next(ref DebugVisual dv)
         { // 9 Parent / - , - , Next
             JsonNode retVal = next;
@@ -74,5 +75,6 @@ namespace Gason
                 return desc;
             }
         }
+#endif
     }
 }

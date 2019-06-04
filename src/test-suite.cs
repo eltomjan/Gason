@@ -224,6 +224,7 @@ public class Tests
 
         return 0;
     }
+#if DoubleLinked
     public static void ModifyTwitter(ref BreadthFirst bf1, ref BreadthFirst bf2, Byte[] raw)
     {
         JsonNode nNo2 = null, nNo3 = null, nId1 = null, nId2 = null;
@@ -301,4 +302,5 @@ public class Tests
             bf2.PrependChild(nId2); // Invalid in JSON
         }
     }
+#endif
 }

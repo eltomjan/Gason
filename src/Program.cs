@@ -12,10 +12,13 @@ public class Program
         JsonNode jsn;
         Byte[] raw;
         BrowseNode v1, v2;
+#if DoubleLinked
         BreadthFirst bf1, bf2;
+#endif
         Parser jsonParser = new Parser(true); // FloatAsDecimal
         Printer prn = new Printer();
 
+#if DoubleLinked
         raw = Encoding.UTF8.GetBytes(Strings.JSONnetPart1);
         jsonParser.Parse(raw, ref endPos, out JsonNode jsn1
 #if KEY_SPLIT
@@ -101,6 +104,7 @@ public class Program
         if (v2.NodeRawData == null) Console.WriteLine("Bug - 2nd modified Twitter JSON empty");
         else if (Strings.Twitter2 == prn.Print(ref v2, 0).ToString()) Console.WriteLine($"Twitter check 2/2 OK - 2nd variant has expected content:");
         else Console.WriteLine($"Twiter RemoveTwins result 2/2 differs:\n{prn.Print(ref v2, 0).ToString()}");
+#endif
 
         raw = File.ReadAllBytes(@"citylots.json");
         Benchmark b = new Benchmark(raw);

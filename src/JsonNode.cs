@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Gason
@@ -10,8 +9,10 @@ namespace Gason
     { // 16B
         public JsonTag Tag = JsonTag.JSON_NULL;
         private JsonNode next; // 4B
+#if DoubleLinked
         private JsonNode parent;
         private JsonNode pred;
+#endif
         private JsonNode node;
         protected P_ByteLnk keyIdxes;
 #if DebugPrint
@@ -23,21 +24,29 @@ namespace Gason
         public P_ByteLnk KeyIndexesData { get { return keyIdxes; } }
 
         public P_ByteLnk doubleOrString;
+#if DoubleLinked
         public ref JsonNode Parent { get { return ref parent; } }
         public ref JsonNode Pred { get { return ref pred; } }
+#endif
         public ref JsonNode NextTo {
             get {
+#if DoubleLinked
                 if (next != null) next.parent = parent;
+#endif
                 return ref next;
             }
         }
+#if DoubleLinked
         public void SetNextTo(JsonNode newNode) {
             if(next?.pred != null) next.pred = null;
             next = newNode;
         }
+#endif
         public ref JsonNode NodeBelow {
             get {
-                if(node?.parent != null) node.parent = this;
+#if DoubleLinked
+                if (node?.parent != null) node.parent = this;
+#endif
                 return ref node;
             }
         }
@@ -107,7 +116,9 @@ namespace Gason
             }
             next = orig.next; // last -> 1st
             orig.next = this; // 1st -> last
+#if DoubleLinked
             this.pred = orig; // before prev <- last
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -121,8 +132,10 @@ namespace Gason
                 return;
             }
             next = orig.next; // last -> 1st
-            orig.next = this; // prev -> last
+            orig.next = this; // 1st -> last
+#if DoubleLinked
             this.pred = orig; // before prev <- last
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -134,9 +147,13 @@ namespace Gason
             {
                 head = tail.next; // 1st one
                 tail.next = null; // last -> next => cut end
+#if DoubleLinked
                 head.pred = null; // Remove pred of 1st one
+#endif
                 node = head; // attach to parent
+#if DoubleLinked
                 head.parent = this; // and 
+#endif
                 doubleOrString.data = 0; // clear parent's value
             } else if(tag == JsonTag.JSON_ARRAY) doubleOrString.data = 0; // clear key value
         }
@@ -296,6 +313,7 @@ namespace Gason
         {
             return NodeBelow;
         }
+#if DoubleLinked
         internal Queue<String> PushNodes(ref HashSet<JsonNode> visited, ref Queue<JsonNode> whereNext)
         {
             Queue<String> retVal = new Queue<String>();
@@ -356,6 +374,7 @@ namespace Gason
             return retVal;
         }
 //*/
+#endif
         public Boolean Equals(Byte[] src1, JsonNode j2, Byte[] src2)
         {
             if (Tag != j2.Tag) return false;
@@ -401,7 +420,7 @@ namespace Gason
 
             return true;
         }
-
+#if DoubleLinked
         public JsonNode RemoveCurrent(Byte[] src)
         {
             JsonNode retVal = null, retVal2 = null;
@@ -575,5 +594,6 @@ namespace Gason
             }
             return null;
         }
+#endif
     }
 }

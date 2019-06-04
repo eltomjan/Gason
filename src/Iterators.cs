@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace Gason
 {
+#if DoubleLinked
     public class BreadthFirst
     {
         public readonly Byte[] src;
@@ -152,7 +153,6 @@ namespace Gason
             child.Parent = current.Parent; // child /\ current's Parent
             return true;
         }
-
         internal void UpdateLevel()
         {
             JsonNode value = current;
@@ -166,4 +166,5 @@ namespace Gason
             }
         }
     }
+#endif
 }

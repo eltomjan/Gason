@@ -34,8 +34,10 @@ namespace Gason
                 startTag = currentNode.NodeRawData.Tag;
                 if(debugInfo) {
                     JsonNode around = currentNode.NodeRawData;
+#if DoubleLinked
                     if (around.Pred != null) printing.Append('<');
                     if (around.Parent != null) printing.Append('^');
+#endif
                     if (around.NodeBelow != null) printing.Append(@"\/");
                     if (around.NextTo != null) printing.Append('>');
 #if DEBUGGING
@@ -124,6 +126,7 @@ namespace Gason
             }
         }
 /*/
+#if DoubleLinked
         public String PrintStructureInfo(JsonNode start, Byte[] src, int indent)
         {
             String retVal;
@@ -145,6 +148,7 @@ namespace Gason
             } while (true);
             return retVal;
         }
+#endif
 //*/
     }
 }

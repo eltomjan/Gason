@@ -430,6 +430,7 @@ namespace Gason
             }
             return JsonErrno.BREAKING_BAD;
         }
+#if DoubleLinked
         public void RemoveTwins(ref BreadthFirst bf1, ref BreadthFirst bf2)
         {
             Printer prn = new Printer();
@@ -831,5 +832,6 @@ namespace Gason
                 else parentNode.NodeRawData.NextTo = valueObject;
             }
         }
+#endif
     }
 }

@@ -23,6 +23,7 @@ namespace Gason
             this.src = src;
             m_debugModeLimit = debugModeLimit;
         }
+#if DoubleLinked
         public VisualNode3 Parent_Viewer
         {
             get
@@ -45,6 +46,7 @@ namespace Gason
                 return null;
             }
         }
+#endif
         public VisualNode3 Next_Viewer
         {
             get {
