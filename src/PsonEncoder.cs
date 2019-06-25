@@ -57,10 +57,13 @@ namespace PSON
             if (obj.Tag_Viewer == JsonTag.JSON_NULL)
                 WriteNull();
 
-            else if (obj.Tag_Viewer == JsonTag.JSON_STRING || obj.Tag_Viewer == JsonTag.JSON_NUMBER_STR)
+            else if (obj.Tag_Viewer == JsonTag.JSON_STRING)
                 writeString(obj.Value_Viewer, false);
 
-            else if (obj.Tag_Viewer == JsonTag.JSON_NUMBER)
+            else if (obj.Tag_Viewer == JsonTag.JSON_NUMBER_STR)
+            {
+                WriteDouble(Double.Parse(obj.Value_Viewer.Replace('.', ',')));
+            } else if (obj.Tag_Viewer == JsonTag.JSON_NUMBER)
                 WriteDouble(obj.NodeRawData.ToNumber());
 
             else if (obj.Tag_Viewer >= JsonTag.JSON_TRUE) // true, false, null
