@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using Gason;
 
 namespace PSON
 {
@@ -12,7 +12,7 @@ namespace PSON
     {
 		#region Public static methods
 
-		public static byte[] Encode(object structure, IList<string> initialDictionary = null, PsonOptions options = PsonOptions.None)
+		public static byte[] Encode(BrowseNode structure, IList<string> initialDictionary = null, PsonOptions options = PsonOptions.None)
 		{
 			var output = new MemoryStream();
 			using (var encoder = new PsonEncoder(output, initialDictionary, options))
@@ -52,122 +52,67 @@ namespace PSON
 
 		#region Public methods
 
-		public void Write(object obj)
+		public void Write(BrowseNode obj)
 		{
-			if (obj == null)
-				WriteNull();
+            if (obj.Tag_Viewer == JsonTag.JSON_NULL)
+                WriteNull();
 
-			else if (obj is string)
-				writeString((string)obj, false);
+            else if (obj.Tag_Viewer == JsonTag.JSON_STRING || obj.Tag_Viewer == JsonTag.JSON_NUMBER_STR)
+                writeString(obj.Value_Viewer, false);
 
-			else if (obj is int)
-				WriteInt((int)obj);
+            else if (obj.Tag_Viewer == JsonTag.JSON_NUMBER)
+                WriteDouble(obj.NodeRawData.ToNumber());
 
-			else if (obj is uint)
-				WriteInt((int)(uint)obj);
+            else if (obj.Tag_Viewer >= JsonTag.JSON_TRUE) // true, false, null
+                WriteBool(obj.Tag_Viewer == JsonTag.JSON_TRUE);
 
-			else if (obj is long)
-				WriteLong((long)obj);
+            else if (obj.Tag_Viewer == JsonTag.JSON_ARRAY)
+                WriteArray(obj);
 
-			else if (obj is ulong)
-				WriteLong((long)(ulong)obj);
+            else if (obj.Tag_Viewer == JsonTag.JSON_OBJECT)
+                WriteObject(obj);
 
-			else if (obj is float)
-				WriteFloat((float)obj);
-
-			else if (obj is double)
-				WriteDouble((double)obj);
-
-			else if (obj is bool)
-				WriteBool((bool)obj);
-
-			else if (typeof(IList).IsAssignableFrom(obj.GetType()))
-				WriteArray((IList)obj);
-
-			else if (typeof(IDictionary).IsAssignableFrom(obj.GetType()))
-				WriteObject((IDictionary)obj);
-
-			else
-				throw new ArgumentException("unsupported type: " + obj.GetType(), "obj");
+            else
+                throw new ArgumentException("unsupported type: " + obj.Tag_Viewer, "obj");
 		}
 
 		public override void WriteString(string str) => writeString(str, false);
 
         public void WriteStringKey(string str) => writeString(str, true);
 
-		public void WriteArray(IList list)
+		public void WriteArray(BrowseNode list)
 		{
-			if (ReferenceEquals(list, null))
-			{
+            if (list.NodeRawData == null)
+            {
 				WriteNull();
 				return;
 			}
-			var count = list.Count;
+            BrowseNode below = list.Node_Viewer;
+            var count = below.Count;
 			WriteStartArray(count);
-			for (var i = 0; i < count; ++i)
-				Write(list[i]);
-		}
+            do
+            {
+                Write(below);
+                below = below.Next_Viewer;
+            } while (below != null);
+        }
 
-		public void WriteArray(IList<object> list)
+        public void WriteObject(BrowseNode obj)
 		{
-			if (ReferenceEquals(list, null))
+			if (obj.NodeRawData == null)
 			{
 				WriteNull();
 				return;
 			}
-			var count = list.Count;
-			WriteStartArray(count);
-			for (var i = 0; i < count; ++i)
-				Write(list[i]);
+            BrowseNode below = obj.Node_Viewer;
+			WriteStartObject(below.Count);
+            do
+            {
+                writeString((string)below.Key_Viewer, true);
+                Write(below);
+                below = below.Next_Viewer;
+            } while (below != null);
 		}
-
-		public void WriteObject(IDictionary obj)
-		{
-			if (ReferenceEquals(obj, null))
-			{
-				WriteNull();
-				return;
-			}
-			WriteStartObject(obj.Count);
-			foreach (DictionaryEntry entry in obj)
-			{
-				writeString((string)entry.Key, true);
-				Write(entry.Value);
-			}
-		}
-
-		public void WriteObject(IDictionary<string,object> obj)
-		{
-			if (obj == null)
-			{
-				WriteNull();
-				return;
-			}
-			WriteStartObject(obj.Count);
-			foreach (var entry in obj)
-			{
-				writeString(entry.Key, true);
-				Write(entry.Value);
-			}
-		}
-
-		public void WriteObject(IList<string> keys, IList<object> values)
-		{
-			if (ReferenceEquals(keys, null))
-				throw new ArgumentNullException("keys");
-			if (ReferenceEquals(values, null))
-				throw new ArgumentNullException("values");
-			var count = keys.Count;
-			if (count != values.Count)
-				throw new ArgumentException("element count mismatch");
-			WriteStartObject(count);
-			for (var i = 0; i < count; ++i)
-			{
-				writeString(keys[i], true);
-				Write(values[i]);
-			}
-		}
-
 		#endregion
 
 		#region Non-public methods
