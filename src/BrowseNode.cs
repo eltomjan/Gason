@@ -70,6 +70,20 @@ namespace Gason
         }
 #if DoubleLinked
         public String Path_Viewer { get { return Path(); } }
+
+        public int Count {
+            get {
+                int retVal = 1;
+                JsonNode n = NodeRawData;
+                while(n.NextTo != null)
+                {
+                    n = n.NextTo;
+                    retVal++;
+                }
+                return retVal;
+            }
+        }
+
         public String Path(Boolean sortable = false)
         {
             BrowseNode end = this;
