@@ -1,4 +1,5 @@
-﻿using PSON.Internal;
+﻿using Gason;
+using PSON.Internal;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,12 +12,12 @@ namespace PSON
 	/// </summary>
 	public class PsonDecoder : IDisposable
 	{
-		public static object Decode(byte[] buffer, out String stringify, IList<string> initialDictionary = null, PsonOptions options = PsonOptions.None, int allocationLimit = -1)
+		public static object Decode(byte[] buffer, out JsonNode root, out String stringify, IList<string> initialDictionary = null, PsonOptions options = PsonOptions.None, int allocationLimit = -1)
 		{
 			var input = new MemoryStream(buffer);
 			using (var decoder = new PsonDecoder(input, initialDictionary, options, allocationLimit))
             {
-                Object retVal = decoder.Read();
+                Object retVal = decoder.Read(out root);
                 stringify = decoder.jsonTxt.ToString();
                 return retVal;
             }
@@ -24,8 +25,9 @@ namespace PSON
 
 		private Stream input;
         private StringBuilder jsonTxt;
+        private JsonNode o;
 
-		private List<string> dictionary;
+        private List<string> dictionary;
 
 		private PsonOptions options;
 
@@ -47,40 +49,55 @@ namespace PSON
                 dictionary = new List<string>(initialDictionary);
 		}
 
-		public object Read()
+		public object Read(out JsonNode root)
 		{
-			checkDisposed();
-			return decodeValue();
+            root = null;
+            checkDisposed();
+            o = new JsonNode { Tag = JsonTag.JSON_OBJECT };
+            Object retVal = decodeValue();
+            root = o;
+            return retVal;
 		}
 
 		private object decodeValue()
-		{ 
+		{
 			var token = (byte)input.ReadByte();
             Object retVal;
             String value;
             if (token <= Token.MAX)
 				return token;
-			switch (token)
+            JsonNode root = o;
+#if DEBUGGING
+            while (root?.Parent?.Parent != null) root = root.Parent;
+            VisualNode3 oV = new VisualNode3(ref root, Encoding.UTF8.GetBytes(jsonTxt.ToString()), 10000);
+#endif
+            switch (token)
 			{
 				case Token.NULL:
                     jsonTxt.Append("null");
+                    o.Tag = JsonTag.JSON_NULL;
 					return null;
 
 				case Token.TRUE:
                     jsonTxt.Append("true");
+                    o.Tag = JsonTag.JSON_TRUE;
                     return true;
 
 				case Token.FALSE:
                     jsonTxt.Append("false");
+                    o.Tag = JsonTag.JSON_FALSE;
                     return false;
 
 				case Token.EOBJECT:
+                    o.Tag = JsonTag.JSON_OBJECT;
 					return new Dictionary<string, object>();
 
 				case Token.EARRAY:
+                    o.Tag = JsonTag.JSON_ARRAY;
 					return new List<object>();
 
 				case Token.ESTRING:
+                    o.Tag = JsonTag.JSON_STRING;
 					return string.Empty;
 
 				case Token.OBJECT:
@@ -98,11 +115,15 @@ namespace PSON
                 case Token.INTEGER:
                     retVal = input.ReadVarint32().ZigZagDecode();
                     jsonTxt.Append(retVal);
+                    o.Tag = JsonTag.JSON_NUMBER;
+                    o.doubleOrString.number = (double)retVal;
                     return retVal;
 
                 case Token.LONG:
                     retVal = input.ReadVarint64().ZigZagDecode();
                     jsonTxt.Append(retVal);
+                    o.Tag = JsonTag.JSON_NUMBER;
+                    o.doubleOrString.number = (double)retVal;
                     return retVal;
 
                 case Token.FLOAT:
@@ -112,6 +133,8 @@ namespace PSON
 						Array.Reverse(convertArray, 0, 4);
                     float retF = BitConverter.ToSingle(convertArray, 0);
                     jsonTxt.Append(retF.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    o.Tag = JsonTag.JSON_NUMBER;
+                    o.doubleOrString.number = (double)retF;
                     return retF;
 
 				case Token.DOUBLE:
@@ -120,17 +143,25 @@ namespace PSON
 					if (!BitConverter.IsLittleEndian)
 						Array.Reverse(convertArray, 0, 8);
                     double retD = BitConverter.ToDouble(convertArray, 0);
+                    o.Tag = JsonTag.JSON_NUMBER;
+                    o.doubleOrString.number = retD;
                     jsonTxt.Append(retD.ToString(System.Globalization.CultureInfo.InvariantCulture));
                     return retD;
 
                 case Token.STRING_ADD:
 				case Token.STRING:
                     value = decodeString(token, false);
+                    o.Tag = JsonTag.JSON_STRING;
+                    o.doubleOrString.pos = jsonTxt.Length + 1;
+                    o.doubleOrString.length = value.Length;
                     jsonTxt.Append('"').Append(value).Append('"');
                     return value;
 
 				case Token.STRING_GET:
                     value = getString(input.ReadVarint32());
+                    o.Tag = JsonTag.JSON_STRING;
+                    o.doubleOrString.pos = jsonTxt.Length + 1;
+                    o.doubleOrString.length = value.Length;
                     jsonTxt.Append('"').Append(value).Append('"');
                     return value;
 
@@ -144,48 +175,72 @@ namespace PSON
 
 		private IList<object> decodeArray()
 		{
+            o.Tag = JsonTag.JSON_ARRAY;
 			var count = input.ReadVarint32();
 			if (allocationLimit > -1 && count > allocationLimit)
 				throw new PsonException("allocation limit exceeded:" + count);
 			var list = new List<object>(checked((int)count));
-			while (count-- > 0) {
+            JsonNode aPos = o, aRet = o;
+            bool first1 = true;
+			do {
 				list.Add(decodeValue());
-                if (count > 0) jsonTxt.Append(',');
-            }
-			return list;
-		}
+                if (first1) {
+                    first1 = false;
+                    o = aPos.NodeBelow;
+                    while (o.NextTo != null) o = o.NextTo;
+                }
+                if (count-- > 1) {
+                    jsonTxt.Append(',');
+                    o = o.CreateNext();
+                    aPos = o;
+                } else break;
+            } while (true);
+            o = aRet;
+            return list;
+        }
 
 		private Dictionary<string,object> decodeObject()
 		{
 			var count = input.ReadVarint32();
 			if (allocationLimit > -1 && count > allocationLimit)
 				throw new PsonException("allocation limit exceeded: " + count);
+            if(o.Tag != JsonTag.JSON_NULL) o = o.CreateNode();
+            o.Tag = JsonTag.JSON_OBJECT;
+            JsonNode thisObj = o;
+            if (count > 0) o = o.CreateNode();
 			var obj = new Dictionary<string, object>(checked((int)count));
-			while (count-- > 0)
-			{
-				var strToken = (byte)input.ReadByte();
+            do
+            {
+                var strToken = (byte)input.ReadByte();
                 String key;
                 switch (strToken)
-				{
-					case Token.STRING_ADD:
-					case Token.STRING:
+                {
+                    case Token.STRING_ADD:
+                    case Token.STRING:
                         key = decodeString(strToken, true);
                         jsonTxt.Append('"').Append(key).Append("\":");
                         obj[key] = decodeValue();
-						break;
+                        break;
 
-					case Token.STRING_GET:
+                    case Token.STRING_GET:
                         key = getString(input.ReadVarint32());
+                        o.SetKey(jsonTxt.Length + 1, key.Length);
                         jsonTxt.Append('"').Append(key).Append("\":");
                         obj[key] = decodeValue();
-						break;
+                        break;
 
-					default:
-						throw new PsonException("string token expected");
-				}
-                if (count > 0) jsonTxt.Append(',');
-			}
-			return obj;
+                    default:
+                        throw new PsonException("string token expected");
+                }
+                if (count-- > 1)
+                {
+                    jsonTxt.Append(',');
+                    o = o.CreateNext();
+                }
+                else break;
+            } while (true);
+            o = thisObj;
+            return obj;
 		}
 
 		private string decodeString(byte token, bool isKey)
