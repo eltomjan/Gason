@@ -24,7 +24,8 @@ namespace PSON
         }
 
 		private Stream input;
-        private StringBuilder jsonTxt;
+        private MemoryStream jsonUTF8;
+        private StreamWriter jsonTxt;
         private JsonNode o;
 
         private List<string> dictionary;
@@ -39,7 +40,8 @@ namespace PSON
 		{
             if (ReferenceEquals(input, null))
 				throw new ArgumentNullException("input");
-            jsonTxt = new StringBuilder();
+            jsonUTF8 = new MemoryStream();
+            jsonTxt = new StreamWriter(jsonUTF8);
             this.input = input;
 			this.options = options;
 			this.allocationLimit = allocationLimit;
@@ -74,17 +76,17 @@ namespace PSON
             switch (token)
 			{
 				case Token.NULL:
-                    jsonTxt.Append("null");
+                    jsonTxt.Write("null");
                     o.Tag = JsonTag.JSON_NULL;
 					return null;
 
 				case Token.TRUE:
-                    jsonTxt.Append("true");
+                    jsonTxt.Write("true");
                     o.Tag = JsonTag.JSON_TRUE;
                     return true;
 
 				case Token.FALSE:
-                    jsonTxt.Append("false");
+                    jsonTxt.Write("false");
                     o.Tag = JsonTag.JSON_FALSE;
                     return false;
 
@@ -101,29 +103,29 @@ namespace PSON
 					return string.Empty;
 
 				case Token.OBJECT:
-                    jsonTxt.Append('{');
+                    jsonTxt.Write('{');
                     retVal = decodeObject();
-                    jsonTxt.Append('}');
+                    jsonTxt.Write('}');
                     return retVal;
 
 				case Token.ARRAY:
-                    jsonTxt.Append('[');
+                    jsonTxt.Write('[');
                     retVal = decodeArray();
-                    jsonTxt.Append(']');
+                    jsonTxt.Write(']');
                     return retVal;
 
                 case Token.INTEGER:
                     retVal = input.ReadVarint32().ZigZagDecode();
-                    jsonTxt.Append(retVal);
+                    jsonTxt.Write(retVal);
                     o.Tag = JsonTag.JSON_NUMBER;
-                    o.doubleOrString.number = (double)retVal;
+                    o.doubleOrString.number = Convert.ToDouble(retVal);
                     return retVal;
 
                 case Token.LONG:
                     retVal = input.ReadVarint64().ZigZagDecode();
-                    jsonTxt.Append(retVal);
+                    jsonTxt.Write(retVal);
                     o.Tag = JsonTag.JSON_NUMBER;
-                    o.doubleOrString.number = (double)retVal;
+                    o.doubleOrString.number = Convert.ToDouble(retVal);
                     return retVal;
 
                 case Token.FLOAT:
@@ -132,9 +134,9 @@ namespace PSON
 					if (!BitConverter.IsLittleEndian)
 						Array.Reverse(convertArray, 0, 4);
                     float retF = BitConverter.ToSingle(convertArray, 0);
-                    jsonTxt.Append(retF.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    jsonTxt.Write(retF.ToString(System.Globalization.CultureInfo.InvariantCulture));
                     o.Tag = JsonTag.JSON_NUMBER;
-                    o.doubleOrString.number = (double)retF;
+                    o.doubleOrString.number = Convert.ToDouble(retF);
                     return retF;
 
 				case Token.DOUBLE:
@@ -145,24 +147,28 @@ namespace PSON
                     double retD = BitConverter.ToDouble(convertArray, 0);
                     o.Tag = JsonTag.JSON_NUMBER;
                     o.doubleOrString.number = retD;
-                    jsonTxt.Append(retD.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    jsonTxt.Write(retD.ToString(System.Globalization.CultureInfo.InvariantCulture));
                     return retD;
 
                 case Token.STRING_ADD:
 				case Token.STRING:
                     value = decodeString(token, false);
                     o.Tag = JsonTag.JSON_STRING;
-                    o.doubleOrString.pos = jsonTxt.Length + 1;
+                    o.doubleOrString.pos = (int)jsonUTF8.Length + 1;
                     o.doubleOrString.length = value.Length;
-                    jsonTxt.Append('"').Append(value).Append('"');
+                    jsonTxt.Write('"');
+                    jsonTxt.Write(value);
+                    jsonTxt.Write('"');
                     return value;
 
 				case Token.STRING_GET:
                     value = getString(input.ReadVarint32());
                     o.Tag = JsonTag.JSON_STRING;
-                    o.doubleOrString.pos = jsonTxt.Length + 1;
+                    o.doubleOrString.pos = (int)jsonUTF8.Length + 1;
                     o.doubleOrString.length = value.Length;
-                    jsonTxt.Append('"').Append(value).Append('"');
+                    jsonTxt.Write('"');
+                    jsonTxt.Write(value);
+                    jsonTxt.Write('"');
                     return value;
 
                 case Token.BINARY:
@@ -181,6 +187,7 @@ namespace PSON
 				throw new PsonException("allocation limit exceeded:" + count);
 			var list = new List<object>(checked((int)count));
             JsonNode aPos = o, aRet = o;
+            o = o.CreateNode();
             bool first1 = true;
 			do {
 				list.Add(decodeValue());
@@ -190,7 +197,7 @@ namespace PSON
                     while (o.NextTo != null) o = o.NextTo;
                 }
                 if (count-- > 1) {
-                    jsonTxt.Append(',');
+                    jsonTxt.Write(',');
                     o = o.CreateNext();
                     aPos = o;
                 } else break;
@@ -218,14 +225,19 @@ namespace PSON
                     case Token.STRING_ADD:
                     case Token.STRING:
                         key = decodeString(strToken, true);
-                        jsonTxt.Append('"').Append(key).Append("\":");
+                        o.SetKey((int)jsonUTF8.Length + 1, key.Length);
+                        jsonTxt.Write('"');
+                        jsonTxt.Write(key);
+                        jsonTxt.Write("\":");
                         obj[key] = decodeValue();
                         break;
 
                     case Token.STRING_GET:
                         key = getString(input.ReadVarint32());
-                        o.SetKey(jsonTxt.Length + 1, key.Length);
-                        jsonTxt.Append('"').Append(key).Append("\":");
+                        o.SetKey((int)jsonUTF8.Length + 1, key.Length);
+                        jsonTxt.Write('"');
+                        jsonTxt.Write(key);
+                        jsonTxt.Write("\":");
                         obj[key] = decodeValue();
                         break;
 
@@ -234,7 +246,7 @@ namespace PSON
                 }
                 if (count-- > 1)
                 {
-                    jsonTxt.Append(',');
+                    jsonTxt.Write(',');
                     o = o.CreateNext();
                 }
                 else break;

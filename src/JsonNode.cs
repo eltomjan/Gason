@@ -15,6 +15,16 @@ namespace Gason
 #endif
         private JsonNode node;
         protected P_ByteLnk keyIdxes;
+        internal void SetKey(P_ByteLnk keyIdx) { keyIdxes = keyIdx; }
+        internal void SetKey(int pos, int len) {
+            keyIdxes.pos = pos;
+            keyIdxes.length = len;
+        }
+        internal void SetPred(JsonNode myPred) {
+            pred = myPred;
+            if(myPred != null) myPred.next = this;
+        }
+
 #if DebugPrint
         public int startPos, endPos;
 #endif
@@ -49,6 +59,24 @@ namespace Gason
 #endif
                 return ref node;
             }
+        }
+        public JsonNode CreateNode()
+        {
+            node = new JsonNode();
+            node.parent = this;
+            return node;
+        }
+
+        public JsonNode CreateNext()
+        {
+            next = new JsonNode();
+            next.pred = this;
+            next.parent = parent;
+            return next;
+        }
+
+        public void SetNode(JsonNode n) {
+            node = n;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -163,7 +191,7 @@ namespace Gason
             switch (Tag)
             {
                 case JsonTag.JSON_NUMBER:
-                    return ToNumber().ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    return ToDecimal().ToString(System.Globalization.CultureInfo.InvariantCulture);
                 case JsonTag.JSON_NUMBER_STR:
                     return Encoding.ASCII.GetString(src, doubleOrString.pos, doubleOrString.length);
                 case JsonTag.JSON_FALSE:
@@ -308,6 +336,10 @@ namespace Gason
         public double ToNumber()
         {
             return doubleOrString.number;
+        }
+        public decimal ToDecimal()
+        {
+            return (decimal)doubleOrString.number;
         }
         public JsonNode ToNode()
         {

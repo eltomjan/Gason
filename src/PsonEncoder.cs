@@ -91,9 +91,9 @@ namespace PSON
 				return;
 			}
             BrowseNode below = list.Node_Viewer;
-            var count = below.Count;
+            var count = below?.Count??0;
 			WriteStartArray(count);
-            do
+            if (below!= null) do
             {
                 Write(below);
                 below = below.Next_Viewer;
