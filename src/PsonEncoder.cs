@@ -26,7 +26,7 @@ namespace PSON
 
 		#region Non-public properties
 
-		private PsonOptions options;
+		private readonly PsonOptions options;
 
 		private Dictionary<string, uint> dictionary;
 
@@ -58,7 +58,7 @@ namespace PSON
                 WriteNull();
 
             else if (obj.Tag_Viewer == JsonTag.JSON_STRING)
-                writeString(obj.Value_Viewer, false);
+                WriteString(obj.Value_Viewer, false);
 
             else if (obj.Tag_Viewer == JsonTag.JSON_NUMBER_STR)
             {
@@ -79,9 +79,9 @@ namespace PSON
                 throw new ArgumentException("unsupported type: " + obj.Tag_Viewer, "obj");
 		}
 
-		public override void WriteString(string str) => writeString(str, false);
+		public override void WriteString(string str) => WriteString(str, false);
 
-        public void WriteStringKey(string str) => writeString(str, true);
+        public void WriteStringKey(string str) => WriteString(str, true);
 
 		public void WriteArray(BrowseNode list)
 		{
@@ -111,7 +111,7 @@ namespace PSON
 			WriteStartObject(below.Count);
             do
             {
-                writeString((string)below.Key_Viewer, true);
+                WriteString((string)below.Key_Viewer, true);
                 Write(below);
                 below = below.Next_Viewer;
             } while (below != null);
@@ -120,7 +120,7 @@ namespace PSON
 
 		#region Non-public methods
 
-		private void writeString(string str, bool isKey = false)
+		private void WriteString(string str, bool isKey = false)
 		{
 			if (ReferenceEquals(str, null))
 			{
@@ -132,13 +132,12 @@ namespace PSON
 				WriteEmptyString();
 				return;
 			}
-			uint index;
-			if (dictionary != null && dictionary.TryGetValue(str, out index))
-			{
-				WriteStringGet(index);
-				return;
-			}
-			if (isKey)
+            if (dictionary != null && dictionary.TryGetValue(str, out uint index))
+            {
+                WriteStringGet(index);
+                return;
+            }
+            if (isKey)
 			{
 				if ((options & PsonOptions.ProgressiveKeys) > 0)
 				{

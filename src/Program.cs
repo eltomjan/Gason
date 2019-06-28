@@ -8,11 +8,11 @@ public class Program
     public static void Main()
     {
         Tests.TestAll();
+        Byte[] raw;
+#if DoubleLinked
         int endPos = -1;
         JsonNode jsn;
-        Byte[] raw;
         BrowseNode v1, v2;
-#if DoubleLinked
         BreadthFirst bf1, bf2;
 #endif
         Parser jsonParser = new Parser(true); // FloatAsDecimal

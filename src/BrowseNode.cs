@@ -68,14 +68,13 @@ namespace Gason
                 } else return null;
             }
         }
-#if DoubleLinked
-        public String Path_Viewer { get { return Path(); } }
-
-        public int Count {
-            get {
+        public int Count
+        {
+            get
+            {
                 int retVal = 1;
                 JsonNode n = NodeRawData;
-                while(n.NextTo != null)
+                while (n.NextTo != null)
                 {
                     n = n.NextTo;
                     retVal++;
@@ -83,6 +82,8 @@ namespace Gason
                 return retVal;
             }
         }
+#if DoubleLinked
+        public String Path_Viewer { get { return Path(); } }
 
         public String Path(Boolean sortable = false)
         {
