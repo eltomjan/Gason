@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Gason
 {
 #if DoubleLinked
-    public class BreadthFirst
+    public class DepthFirst
     {
         public readonly Byte[] src;
         public JsonNode root;
@@ -31,14 +31,14 @@ namespace Gason
             }
         }
         public int Level { get; private set; }
-        public BreadthFirst(JsonNode wn, Byte[] _src)
+        public DepthFirst(JsonNode wn, Byte[] _src)
         {
             src = _src;
             root = wn;
             current = wn;
             Level = 0;
         }
-        public BreadthFirst(BrowseNode wn)
+        public DepthFirst(BrowseNode wn)
         {
             src = wn.src;
             root = wn.NodeRawData;
@@ -83,7 +83,7 @@ namespace Gason
             }
             return false;
         }
-        public bool NextAs(Byte[] src1, BreadthFirst second, Byte[] src2)
+        public bool NextAs(Byte[] src1, DepthFirst second, Byte[] src2)
         {
             if (second.current.Parent != null && second.current.Parent.NodeBelow != null) {
                 second.current = second.current.Parent.NodeBelow;

@@ -431,7 +431,7 @@ namespace Gason
             return JsonErrno.BREAKING_BAD;
         }
 #if DoubleLinked
-        public void RemoveTwins(ref BreadthFirst bf1, ref BreadthFirst bf2)
+        public void RemoveTwins(ref DepthFirst bf1, ref DepthFirst bf2)
         {
             Printer prn = new Printer();
             int debug = 0;

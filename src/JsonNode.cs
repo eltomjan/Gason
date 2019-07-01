@@ -20,10 +20,6 @@ namespace Gason
             keyIdxes.pos = pos;
             keyIdxes.length = len;
         }
-        internal void SetPred(JsonNode myPred) {
-            pred = myPred;
-            if(myPred != null) myPred.next = this;
-        }
 
 #if DebugPrint
         public int startPos, endPos;
@@ -63,15 +59,19 @@ namespace Gason
         public JsonNode CreateNode()
         {
             node = new JsonNode();
+#if DoubleLinked
             node.parent = this;
+#endif
             return node;
         }
 
         public JsonNode CreateNext()
         {
             next = new JsonNode();
+#if DoubleLinked
             next.pred = this;
             next.parent = parent;
+#endif
             return next;
         }
 

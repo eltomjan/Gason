@@ -225,7 +225,7 @@ public class Tests
         return 0;
     }
 #if DoubleLinked
-    public static void ModifyTwitter(ref BreadthFirst bf1, ref BreadthFirst bf2, Byte[] raw)
+    public static void ModifyTwitter(ref DepthFirst bf1, ref DepthFirst bf2, Byte[] raw)
     {
         JsonNode nNo2 = null, nNo3 = null, nId1 = null, nId2 = null;
         if (bf2.FindNode("created_at")) // Small TC-like demo

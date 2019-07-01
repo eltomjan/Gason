@@ -13,20 +13,32 @@ public class Program
         int endPos = -1;
         JsonNode jsn;
         BrowseNode v1, v2;
-        BreadthFirst bf1, bf2;
+        DepthFirst bf1, bf2;
 #endif
         Parser jsonParser = new Parser(true); // FloatAsDecimal
         Printer prn = new Printer();
 
 #if DoubleLinked
         raw = Encoding.UTF8.GetBytes(Strings.JSONnetPart1);
+        raw = Encoding.UTF8.GetBytes(Tests.ReadFile("pass6.json"));
         jsonParser.Parse(raw, ref endPos, out JsonNode jsn1
 #if KEY_SPLIT
             , new ByteString[] { }, 0, 0, 0
 #endif
         );
-        bf1 = new BreadthFirst(jsn1, raw);
+        bf1 = new DepthFirst(jsn1, raw);
         v1 = new BrowseNode(ref jsn1, raw);
+        String[] dict = "batters,id,name,ppu,type".Split(',');
+        dict = new string[0];
+        Byte[] pson = PSON.PsonEncoder.Encode(v1, dict, PSON.PsonOptions.ProgressiveKeys);
+
+        String printed;
+        JsonNode json;
+        dict = new string[0];
+        var o = PSON.PsonDecoder.Decode(pson, out json, out printed, dict, PSON.PsonOptions.ProgressiveKeys);
+        VisualNode3 root = new VisualNode3(ref json, Encoding.UTF8.GetBytes(printed), 10000);
+        Console.WriteLine(prn.Print(ref v1, 0));
+
 
         raw = Encoding.UTF8.GetBytes(Strings.JSONnetPart2);
         jsonParser.Parse(raw, ref endPos, out JsonNode jsn2
@@ -37,7 +49,7 @@ public class Program
         jsonParser.SortPaths(jsn2, raw, "id");
         v2 = new BrowseNode(ref jsn2, raw);
 
-        bf2 = new BreadthFirst(jsn2, raw);
+        bf2 = new DepthFirst(jsn2, raw);
         jsonParser.RemoveTwins(ref bf1, ref bf2);
 
         Console.WriteLine("RemoveTwins result 1/2:");
@@ -94,8 +106,8 @@ public class Program
         );
         v1 = new BrowseNode(ref jsn01, raw);
         v2 = new BrowseNode(ref jsn02, raw);
-        bf1 = new BreadthFirst(jsn01, raw);
-        bf2 = new BreadthFirst(jsn02, raw);
+        bf1 = new DepthFirst(jsn01, raw);
+        bf2 = new DepthFirst(jsn02, raw);
         Tests.ModifyTwitter(ref bf1, ref bf2, raw);
         jsonParser.RemoveTwins(ref bf1, ref bf2);
         if (v1.NodeRawData == null) Console.WriteLine("Bug - 1st modified Twitter JSON empty");
