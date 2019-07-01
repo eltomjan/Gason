@@ -20,7 +20,6 @@ public class Program
 
 #if DoubleLinked
         raw = Encoding.UTF8.GetBytes(Strings.JSONnetPart1);
-        raw = Encoding.UTF8.GetBytes(Tests.ReadFile("pass6.json"));
         jsonParser.Parse(raw, ref endPos, out JsonNode jsn1
 #if KEY_SPLIT
             , new ByteString[] { }, 0, 0, 0
@@ -28,17 +27,6 @@ public class Program
         );
         bf1 = new DepthFirst(jsn1, raw);
         v1 = new BrowseNode(ref jsn1, raw);
-        String[] dict = "batters,id,name,ppu,type".Split(',');
-        dict = new string[0];
-        Byte[] pson = PSON.PsonEncoder.Encode(v1, dict, PSON.PsonOptions.ProgressiveKeys);
-
-        String printed;
-        JsonNode json;
-        dict = new string[0];
-        var o = PSON.PsonDecoder.Decode(pson, out json, out printed, dict, PSON.PsonOptions.ProgressiveKeys);
-        VisualNode3 root = new VisualNode3(ref json, Encoding.UTF8.GetBytes(printed), 10000);
-        Console.WriteLine(prn.Print(ref v1, 0));
-
 
         raw = Encoding.UTF8.GetBytes(Strings.JSONnetPart2);
         jsonParser.Parse(raw, ref endPos, out JsonNode jsn2
@@ -80,7 +68,7 @@ public class Program
         else Console.WriteLine("SortPaths 2.2 OK");
         endPos = -1;
 #else
-        Console.WriteLine("1st 2 rows of betters only:");
+        Console.WriteLine("1st 2 rows of batters only:");
         jsonParser.Parse(raw, ref endPos, out jsn
             , keys, 2, endPos, 2
             ); // and now following 2
